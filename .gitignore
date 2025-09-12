@@ -1,0 +1,30 @@
+# Ignore Microsoft Word temporary files
+~$*.docx
+~$*.doc
+
+# Ignore Microsoft Word backup files
+*.wbk
+
+# Ignore Microsoft Word autosave files
+*.asd
+
+# Ignore Microsoft Office temporary files
+*.tmp
+*.temp
+
+# Ignore HTML backup files created by some editors
+*~.html
+
+# Ignore common editor swap files (useful if editing HTML)
+*.swp
+*.swo
+
+# Ignore system files like Thumbs.db and .DS_Store
+Thumbs.db
+.DS_Store
+
+# Ignore node_modules folder if using node for HTML tooling
+node_modules/
+
+# Ignore log files
+*.log
