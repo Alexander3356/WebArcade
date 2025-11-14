@@ -6,24 +6,56 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         super({ key: 'GameScene' });
         this.paddle;
         this.ball;
-        this.cursor;
-        this.cursor2;
+        this.musica;
         this.ballAttached = true;
         this.difficolta = 0;
         this.timer = 3500;
+
+        //movimento
+        this.cursor;
+        this.cursor2;
+
+        //mattoni
         this.bricks;
         this.mattoniTexture = ["brick","brick2"];
         this.mattoni = [];
+
+        //punteggio
         this.score = 0;
         this.text_score;
+
+        //pausa
         this.pulsanti_pausa = [];
         this.pausa = false;
         this.testo_pausa = null; 
+
+        //velocità pallina
         this.velocitaX = 0;
         this.velocitaY = 0;
-        this.musica;
+        
+        //potenziamenti
         this.powerups = [];
         this.timerCannone = 0;
+        this.timerPaddleGrande = 0;
+        this.timerPaddleCorto = 0;
+        this.ingrandimento = false;
+        this.scudo = null;
+        this.scudo2 = null;
+        this.timerScudo = 0;
+        this.timerComandiInvertiti = 0;
+
+        //potenziamenti permanenti
+        this.blocchiAlPotenziamento = 1;
+        this.blocchiDistrutti = 0;
+        this.text_blocchiAlPotenziamento;
+        this.text_blocchiDistrutti;
+        this.sbloccoPotenziamento = 0;
+        this.pallaDiFuoco = false;
+        this.timerPallaDiFuoco = 0;
+        this.barraPallaDiFuoco = null;
+        this.riempimentoPallaDiFuoco;
+        this.pallaDiFuocoAttiva = false;
+
     }
 
     preload() { //per caricare gli assets
@@ -34,6 +66,9 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.load.image('brick', 'Assets/Images/brick1.png');
         this.load.image('brick2', 'Assets/Images/brick 2.png');
         this.load.image('powerup', 'Assets/Images/powerup.png');
+        this.load.image('powerdown', 'Assets/Images/powerdown.png');
+        this.load.image('barraPallaDiFuoco', 'Assets/Images/barraFuoco.png');
+        this.load.image('pallaDiFuoco', 'Assets/Images/pallaDiFuoco.png')
 
         //Suoni
         this.load.audio("click", "Assets/Sound/click.wav")
@@ -84,15 +119,24 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             }
         );
 
-        //controlla se viene premuto il pulsante ESC
+        //controlla se viene premuto il pulsante ESC (per la pausa)
         this.input.keyboard.on('keydown-ESC', () => {
             this.togglePause();
         });
 
+        //controlla se viene premuto il pulsante SPACE (per la palla di fuoco)
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.attivaPallaDiFuoco();
+        });
+
         //crea la scritta per il punteggio
-        this.add.text(16, 16, 'PUNTI', { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
+        this.add.text(16, 16, 'PUNTEGGIO', { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
         this.text_score = this.add.text(16, 40, '0', { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
 
+        this.text_blocchiAlPotenziamento = this.add.text(1800, 800, this.blocchiAlPotenziamento, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
+        this.text_blocchiDistrutti = this.add.text(1800, 850, this.blocchiDistrutti, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
+
+        //crea la pallina
         this.ball = this.physics.add.sprite(this.paddle.x,(this.paddle.y -40), 'ball');
         this.ball.setScale(1);
         this.ball.setBounce(1);
@@ -147,42 +191,62 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         let rightBorder = this.add.rectangle(1770, 540, 300, 1080, 0x101010);
         this.physics.add.existing(rightBorder, true);
 
-        // aggiungi collisione con la pallina e il paddle
+        // aggiungi collisione con la pallina e i bordi
         this.physics.add.collider(this.ball, leftBorder);
         this.physics.add.collider(this.ball, rightBorder);
         this.physics.add.collider(this.paddle, leftBorder);
         this.physics.add.collider(this.paddle, rightBorder);
                 
+        //collisione paddle e powerup
         this.physics.add.collider(this.paddle, this.powerups, this.collisionePotenziamenti.bind(this));
+
+        //barra per la palla di fuoco
+        this.riempimentoPallaDiFuoco = this.add.rectangle(130, 860, 65, 125, 0xf55d42).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);;
 
     }
 
     update() { //aggiorna lo stato del gioco ogni frame
+        if (this.pausa == false) {
+            //movimento del giocatore
+            if((this.cursor.left.isDown || this.cursor2.left.isDown)){ 
+                if(this.timerComandiInvertiti > 0){ //se c'è il depotenziamento dei comandi invertiti, inverte la velocità
+                    this.paddle.setVelocityX(500)
+                } else {
+                    this.paddle.setVelocityX(-500);
+                }
+            } else if ((this.cursor.right.isDown || this.cursor2.right.isDown)){
+                if(this.timerComandiInvertiti > 0){ //se c'è il depotenziamento dei comandi invertiti, inverte la velocità
+                    this.paddle.setVelocityX(-500)
+                } else {
+                    this.paddle.setVelocityX(500);
+                }
+            } else {
+                this.paddle.setVelocityX(0);
+            }
 
-        //movimento del giocatore
-        if((this.cursor.left.isDown || this.cursor2.left.isDown) && this.pausa == false){ 
-            this.paddle.setVelocityX(-400);
-        } else if ((this.cursor.right.isDown || this.cursor2.right.isDown) && this.pausa == false){
-            this.paddle.setVelocityX(400);
-        } else {
-            this.paddle.setVelocityX(0);
-        }
+            //depotenziamento comandi invvertiti
+            if(this.timerComandiInvertiti > 0){
+                this.timerComandiInvertiti--;
+                if (this.timerComandiInvertiti == 0){
+                    this.paddle.flipY = false;
+                }
+            }
 
-        //lancio pallina
-        if (this.ballAttached == true && (this.cursor.left.isDown || this.cursor2.left.isDown)) {
-            this.ballAttached = false;
-            let vX = Math.floor(Math.random() * 200);
-            this.ball.setVelocity(-100 - vX, -Math.sqrt(300*300 - vX*vX));
-        }
+            //lancio pallina
+            if (this.ballAttached == true && (this.cursor.left.isDown || this.cursor2.left.isDown)) {
+                this.ballAttached = false;
+                let vX = Math.floor(Math.random() * 200);
+                this.ball.setVelocity(-100 - vX, -Math.sqrt(300*300 - vX*vX));
+            }
 
-        if (this.ballAttached == true && (this.cursor.right.isDown || this.cursor2.right.isDown)) {
-            this.ballAttached = false;
-            let vX = Math.floor(Math.random() * 200);
-            this.ball.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
-        }
-        
-        //generazione blocchi (ogni minuto)
-        if (this.pausa == false){
+            if (this.ballAttached == true && (this.cursor.right.isDown || this.cursor2.right.isDown)) {
+                this.ballAttached = false;
+                let vX = Math.floor(Math.random() * 200);
+                this.ball.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
+            }
+            
+            //generazione blocchi (ogni minuto)
+
             if (this.timer > 3600) {
                 this.generaBlocchi();
                 this.timer = 0;
@@ -207,65 +271,168 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                     });
                 }
             }
-        }
+            
+            
+            //controllo se la pallina è attaccata al paddle prima di far andare il timer
+            if (this.ballAttached == false){ 
+                this.timer++;
+            }
+
+            //per evitare che la pallina si blocchi a rimbalzare in orizzontale all'infinito
+            if ((Math.abs(this.ball.body.velocity.y) < 70) && this.ballAttached == false){
+                this.ball.setVelocityY(-80);
+            }
+
         
-        //controllo se la pallina è attaccata al paddle prima di far andare il timer
-        if (this.ballAttached == false && this.pausa == false){ 
-            this.timer++;
-        }
+            //muove i powerup verso il basso se ce ne sono
+            if (this.powerups.length > 0){
+                this.powerups.forEach((powerup) => {
+                    powerup.y += 3
+                    if (powerup.y > 1100){
+                        powerup.destroy(); 
+                    }
+                })
+            }
 
-        //per evitare che la pallina si blocchi a rimbalzare in orizzontale all'infinito
-        if ((Math.abs(this.ball.body.velocity.y) < 70) && this.ballAttached == false && this.pausa == false){
-            this.ball.setVelocityY(-80);
-        }
+            // Attiva il potenziamento cannone
+            if (this.ball.potenziamento == "cannone") {
+                this.ball.potenziamento = "cannoneAttivo";
+                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
+                this.ball.setVelocity(0, -1500); 
+            }
 
-        //muove i powerup verso il basso se ce ne sono
-        if (this.powerups.length > 0){
-            this.powerups.forEach((powerup) => {
-                powerup.y += 3
-                if (powerup.y > 1100){
-                    powerup.destroy(); 
+            if(this.ball.potenziamento == "cannoneAttivo" && this.ball.y <= 20){
+                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
+                this.ball.setVelocity(0, -1500); 
+            }
+
+            if (this.timerCannone == 0 && this.ball.potenziamento == "cannoneAttivo"){
+                this.ball.potenziamento = null;
+                this.ballAttached = true;
+                this.ball.setVelocity(0,0);
+                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
+            }
+
+            if (this.ball.potenziamento == "cannoneAttivo"){
+                this.timerCannone -= 1;
+            }
+
+            //potenziamento paddle grande
+            if (this.timerPaddleGrande > 0) {
+                this.timerPaddleGrande--;
+                
+                if(this.timerPaddleGrande <= 40){
+                    if(this.timerPaddleGrande%2 == 1){
+                        this.paddle.setAlpha(0.5)
+                    } else {
+                        this.paddle.setAlpha(1)
+                    }
                 }
-            })
-        }
 
-        // Attiva il potenziamento cannone
-        if (this.ball.potenziamento == "cannone") {
-            this.ball.potenziamento = "cannoneAttivo";
-            this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-            this.ball.setVelocity(0, -1500); 
-        }
+                if (this.timerPaddleGrande <= 0) {
+                    this.paddle.setScale(1);
+                    this.paddle.setAlpha(1)
+                }
+            }
 
-        if(this.ball.potenziamento == "cannoneAttivo" && this.ball.y <= 20){
-            this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-            this.ball.setVelocity(0, -1500); 
-        }
+            //depotenziamento paddle piccolo
+            if (this.timerPaddleCorto > 0) {
+                this.timerPaddleCorto--;
+                
+                if(this.timerPaddleCorto <= 40){
+                    if(this.timerPaddleCorto%2 == 1){
+                        this.paddle.setAlpha(0.5)
+                    } else {
+                        this.paddle.setAlpha(1)
+                    }
+                }
 
-        if (this.timerCannone == 0 && this.ball.potenziamento == "cannoneAttivo"){
-            this.ball.potenziamento = null;
-            this.ballAttached = true;
-            this.ball.setVelocity(0,0);
-            this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-        }
+                if (this.timerPaddleCorto <= 0) {
+                    this.paddle.setScale(1);
+                    this.paddle.setAlpha(1)
+                }
+            }
 
-        if (this.ball.potenziamento == "cannoneAttivo"){
-            this.timerCannone -= 1;
+            //potenziamento scudo
+            if (this.timerScudo > 0) {
+                this.timerScudo--;
+                
+                if(this.timerScudo <= 40){
+                    if(this.timerScudo%2 == 1){
+                        this.scudo.setAlpha(0.5)
+                        this.scudo2.setAlpha(0.5)
+                    } else {
+                        this.scudo.setAlpha(1)
+                        this.scudo2.setAlpha(1)
+                    }
+                } else if (this.timerScudo > 40 && this.ball.y >= 920){
+                    this.timerScudo = 40;
+                }
+            } 
+            if (this.timerScudo <= 0) {
+                if (this.scudo) {
+                    this.scudo.destroy();
+                    this.scudo = null;
+                }
+                if (this.scudo2) {
+                    this.scudo2.destroy();
+                    this.scudo2 = null;
+                }
+            }
+
+
+            //potenziamento palla di fuoco
+            if(this.pallaDiFuoco == true){
+                this.pallaDiFuoco = false;
+                this.timerPallaDiFuoco = 1800;
+                this.barraPallaDiFuoco = this.physics.add.sprite(130, 800, 'barraPallaDiFuoco');
+                this.barraPallaDiFuoco.setScale(2).setDepth(5);
+            }
+
+            if (this.timerPallaDiFuoco <= 3600 && this.barraPallaDiFuoco != null && this.pallaDiFuocoAttiva == false){
+                this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
+                this.timerPallaDiFuoco++;
+            }
+
+            if (this.pallaDiFuocoAttiva == true){
+                this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
+                this.timerPallaDiFuoco -= 20;
+                if(!(this.ball.x <= 340 || this.ball.x >= 1580 || this.ball.y <= 30 || this.ball.y >= (this.paddle.y -50))){
+                    this.ball.setVelocity(this.velocitaX, this.velocitaY);
+                } else {
+                    this.velocitaX = this.ball.body.velocity.x;
+                    this.velocitaY = this.ball.body.velocity.y;
+                }
+                if (this.timerPallaDiFuoco <= 0){
+                    this.pallaDiFuocoAttiva = false;
+                    this.ball.setTexture("ball");
+                }
+            }
+
+
+        } else {
+            this.paddle.setVelocityX(0);
         }
-        
     }
 
+    attivaPallaDiFuoco(){
+        if(this.timerPallaDiFuoco >= 3600 && this.ingrandimento == false){
+            this.pallaDiFuocoAttiva = true;
+            this.velocitaX = this.ball.body.velocity.x;
+            this.velocitaY = this.ball.body.velocity.y;
+            this.ball.setTexture("pallaDiFuoco");
+        }
+    }
 
     collisionePaddle(){
+        let speed = 500
+
         let diff = this.ball.x - this.paddle.x;
-        let vX = 300 * (diff / (this.paddle.width / 2));
+        let vX = speed * (diff / (this.paddle.width / 2));
 
-        vX = Phaser.Math.Clamp(vX, -300, 300); //limita la velocita a un intervallo tra -300 e 300
+        vX = Phaser.Math.Clamp(vX, -450, 450); //limita la velocita a un intervallo tra -300 e 300
 
-        let vY = Math.sqrt(300 * 300 - vX * vX);
-        
-        if (Math.abs(this.ball.body.velocity.y) < 200){
-            vY = 200;
-        }
+        let vY = Math.sqrt(speed * speed - vX * vX);
 
         this.ball.setVelocity(vX, -vY);
 
@@ -277,8 +444,9 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
             this.ball.setVelocity(0, -1500);
         }
-        if(this.ball.potenziamento == "ingrandimento"){
-            this.ball.potenziamento = null;
+        if(this.ingrandimento == true){
+            let punteggio = 0;
+            this.ingrandimento = false;
             this.ball.setScale(1);
             brick.resistenza = 0;
             this.bricks.children.iterate((altroBlocco) => {
@@ -293,15 +461,19 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
     
                 // Se il blocco è vicino (orizzontale, verticale o diagonale)
                 if (dx <= distanzaX && dy <= distanzaY) {
+                    punteggio += 10 * altroBlocco.resistenza;
+                    this.blocchiDistrutti++;
                     altroBlocco.disableBody(true, true);
                 }
             });
+            this.score += punteggio;
         }
         brick.resistenza -= 1;
 
         if (brick.resistenza <= 0){
+            this.blocchiDistrutti++;
             let casuale = Math.random() * 100;
-            if (casuale < 100){
+            if (casuale <= 20){
                 this.generaPotenziamento(brick);
             }
             brick.disableBody(true, true); //rimuove il blocco
@@ -309,22 +481,63 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             brick.setTexture(this.mattoniTexture[brick.resistenza - 1])
         }
         
-        if (Math.abs(ball.body.velocity.y) < 300) { //aumenta la velocità quando colpisce un blocco
+        if (Math.abs(ball.body.velocity.y) < 800) { //aumenta la velocità quando colpisce un blocco
             ball.setVelocityY(ball.body.velocity.y * 1.05);
         }
 
         this.score += 10;
         this.text_score.setText(this.score);
+        if(this.blocchiDistrutti >= this.blocchiAlPotenziamento){
+            this.blocchiDistrutti -= this.blocchiAlPotenziamento;
+            this.sbloccoPotenziamento++;
+            this.potenziamentiPermanenti();
+        }
+        this.text_blocchiAlPotenziamento.setText(this.blocchiAlPotenziamento);
+        this.text_blocchiDistrutti.setText(this.blocchiDistrutti);
+    }
+
+    potenziamentiPermanenti(){
+        if(this.sbloccoPotenziamento == 1){
+            this.pallaDiFuoco = true;
+        }
     }
 
     collisionePotenziamenti(paddle, powerup){
         this.sound.play("powerup");
-        if (powerup.tipo == "ingrandimento"){
+        if (powerup.tipo == "ingrandimento" && this.pallaDiFuocoAttiva == false){
             this.ball.setScale(3);
-            this.ball.potenziamento = "ingrandimento";
+            this.ingrandimento = true;
         } else if (powerup.tipo == "cannone"){
             this.timerCannone = 300;
             this.ball.potenziamento = "cannone";
+        } else if (powerup.tipo == "paddleLungo"){
+            this.timerPaddleGrande = 3000;
+            this.timerPaddleCorto = 0;
+            paddle.setScale(1.5,1);
+        } else if (powerup.tipo == "scudo"){
+            if (!this.scudo) { // se non esiste già uno scudo non ne crea uno nuovo, ma resetta il timer
+                this.scudo = this.add.rectangle(960, 950, 1320, 20, 0x42ddf5);
+                this.scudo2 = this.add.rectangle(960, 950, 1320, 16, 0xffffff);
+                this.physics.add.existing(this.scudo, true);
+                this.physics.add.existing(this.scudo2, true);
+                this.timerScudo = 4000;
+
+                // aggiungi collisione con la pallina e lo scudo
+                this.physics.add.collider(this.ball, this.scudo);
+            } else {
+                this.timerScudo = 4000;
+            }
+            
+        } else if (powerup.tipo == "paddleCorto"){
+            this.timerPaddleCorto = 3000;
+            this.timerPaddleGrande = 0;
+            paddle.setScale(0.7,1);
+        } else if (powerup.tipo == "piuBlocchi"){
+            this.generaBlocchi();
+            this.generaBlocchi();
+        } else if (powerup.tipo == "comandiInvertiti"){
+            this.timerComandiInvertiti = 400;
+            this.paddle.flipY = true;
         }
         powerup.destroy();
     }
@@ -361,15 +574,30 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
     generaPotenziamento(brick){
         let casuale = Math.random() * 100;
-        if (casuale < 0){
-            let powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
+        let powerup = "";
+        if (casuale <= 15){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
             powerup.tipo = "ingrandimento"; 
-            this.powerups.push(powerup);
-        } else if (casuale < 100){
-            let powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
+        } else if (casuale <= 30 && casuale > 15){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
             powerup.tipo = "cannone"; 
-            this.powerups.push(powerup);
+        } else if (casuale <= 45 && casuale > 30){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
+            powerup.tipo = "paddleLungo"; 
+        } else if (casuale <= 60 && casuale > 45){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerup');
+            powerup.tipo = "scudo"; 
+        } else if (casuale <= 74 && casuale > 60){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerdown');
+            powerup.tipo = "paddleCorto"; 
+        } else if (casuale <= 87 && casuale > 74){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerdown');
+            powerup.tipo = "piuBlocchi"; 
+        } else if (casuale <= 100 && casuale > 87){
+            powerup = this.physics.add.sprite(brick.x, brick.y, 'powerdown');
+            powerup.tipo = "comandiInvertiti"; 
         }
+        this.powerups.push(powerup);
         
 
     }
