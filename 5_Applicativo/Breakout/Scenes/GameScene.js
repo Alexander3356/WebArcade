@@ -14,6 +14,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //movimento
         this.cursor;
         this.cursor2;
+        this.lastDirection = "fermo";
 
         //mattoni
         this.bricks;
@@ -21,7 +22,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.mattoni = [];
 
         //punteggio
-        this.score = 0;
+        this.score = 4900;
         this.text_score;
 
         //pausa
@@ -45,16 +46,44 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.timerComandiInvertiti = 0;
 
         //potenziamenti permanenti
-        this.blocchiAlPotenziamento = 1;
-        this.blocchiDistrutti = 0;
+        this.blocchiAlPotenziamento = 10;
+        this.blocchiDistrutti = 9;
         this.text_blocchiAlPotenziamento;
         this.text_blocchiDistrutti;
         this.sbloccoPotenziamento = 0;
+        this.riempimentoBlocchiDistrutti;
+        this.barraBlocchiAlPotenziamento;
+
         this.pallaDiFuoco = false;
         this.timerPallaDiFuoco = 0;
         this.barraPallaDiFuoco = null;
         this.riempimentoPallaDiFuoco;
         this.pallaDiFuocoAttiva = false;
+        this.durataPallaDiFuoco = 20;
+        this.ballLastXPosition;
+        this.ballLastYPosition;
+        this.ballLastLastXPosition;
+        this.ballLastLastYPosition;
+        this.scia;
+
+        this.proiettile = false;
+        this.timerProiettile = 0;
+        this.frequenzaProiettile = 600;
+
+        this.moltDamage = 1;
+
+        this.calamita = true;
+
+        //Boss 
+        this.bossNumber = 1;
+        this.bossInCorso = false;
+        this.punteggioPerBoss = 5000;
+        this.timerAttacco = 0;
+        this.attacks = [];
+        this.healt = 3;
+        this.bossHealt = 3;
+        this.attackDuration = 0;
+        this.attackNumber = 0;
 
     }
 
@@ -62,13 +91,16 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //immagini
         this.load.image('paddle', 'Assets/Images/paddle.png');
-        this.load.image('ball', 'Assets/Images/ball2.png');
+        this.load.image('ball', 'Assets/Images/ball.png');
         this.load.image('brick', 'Assets/Images/brick1.png');
         this.load.image('brick2', 'Assets/Images/brick 2.png');
         this.load.image('powerup', 'Assets/Images/powerup.png');
         this.load.image('powerdown', 'Assets/Images/powerdown.png');
-        this.load.image('barraPallaDiFuoco', 'Assets/Images/barraFuoco.png');
+        this.load.image('barraDiRiempimento', 'Assets/Images/barraFuoco.png');
         this.load.image('pallaDiFuoco', 'Assets/Images/pallaDiFuoco.png')
+        this.load.image("projectile", "Assets/Images/projectile.png")
+        this.load.image("heart", "Assets/Images/heart.png")
+        this.load.image("bossProjectile", "Assets/Images/bossBullet.png")
 
         //Suoni
         this.load.audio("click", "Assets/Sound/click.wav")
@@ -133,8 +165,8 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.add.text(16, 16, 'PUNTEGGIO', { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
         this.text_score = this.add.text(16, 40, '0', { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
 
-        this.text_blocchiAlPotenziamento = this.add.text(1800, 800, this.blocchiAlPotenziamento, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
-        this.text_blocchiDistrutti = this.add.text(1800, 850, this.blocchiDistrutti, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5);
+        this.text_blocchiAlPotenziamento = this.add.text(1790, 700, this.blocchiAlPotenziamento, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(5).setOrigin(0.5, 0);        
+        this.text_blocchiDistrutti = this.add.text(1790, 870, this.blocchiDistrutti, { fontSize: '32px', fill: 'rgb(255,255,255)' }).setDepth(6).setOrigin(0.5, 0);        
 
         //crea la pallina
         this.ball = this.physics.add.sprite(this.paddle.x,(this.paddle.y -40), 'ball');
@@ -200,9 +232,16 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //collisione paddle e powerup
         this.physics.add.collider(this.paddle, this.powerups, this.collisionePotenziamenti.bind(this));
 
-        //barra per la palla di fuoco
-        this.riempimentoPallaDiFuoco = this.add.rectangle(130, 860, 65, 125, 0xf55d42).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);;
+        //collisione paddle e attacchi boss
+        this.physics.add.collider(this.paddle, this.attacks, this.collisioneAttacco.bind(this));
 
+        //barra per la palla di fuoco
+        this.riempimentoPallaDiFuoco = this.add.rectangle(130, 860, 60, 125, 0xf55d42).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);
+
+        //barra potenziamenti permanenti
+        this.riempimentoBlocchiDistrutti = this.add.rectangle(1790, 860, 60, 125, 0xebdb34).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);
+        this.barraBlocchiAlPotenziamento = this.physics.add.sprite(1790, 800, 'barraDiRiempimento');
+        this.barraBlocchiAlPotenziamento.setScale(2).setDepth(5);
     }
 
     update() { //aggiorna lo stato del gioco ogni frame
@@ -210,16 +249,27 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             //movimento del giocatore
             if((this.cursor.left.isDown || this.cursor2.left.isDown)){ 
                 if(this.timerComandiInvertiti > 0){ //se c'è il depotenziamento dei comandi invertiti, inverte la velocità
-                    this.paddle.setVelocityX(500)
+                    this.lastDirection = 1;
                 } else {
-                    this.paddle.setVelocityX(-500);
+                    this.lastDirection = -1;
                 }
             } else if ((this.cursor.right.isDown || this.cursor2.right.isDown)){
                 if(this.timerComandiInvertiti > 0){ //se c'è il depotenziamento dei comandi invertiti, inverte la velocità
-                    this.paddle.setVelocityX(-500)
+                    this.lastDirection = -1;
                 } else {
-                    this.paddle.setVelocityX(500);
+                    this.lastDirection = 1;
                 }
+            } else if ((this.cursor.right.isDown || this.cursor2.right.isDown) && (this.cursor.left.isDown || this.cursor2.left.isDown)){
+                //se sia sinistra che destra sono premuti, lastDirection rimane uguale
+            } else{
+                //se nulla è premuto, si ferma
+                this.lastDirection = 0;
+            }
+
+            if (this.lastDirection == -1) {
+                this.paddle.setVelocityX(-700);
+            } else if (this.lastDirection == 1) {
+                this.paddle.setVelocityX(700);
             } else {
                 this.paddle.setVelocityX(0);
             }
@@ -228,7 +278,12 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             if(this.timerComandiInvertiti > 0){
                 this.timerComandiInvertiti--;
                 if (this.timerComandiInvertiti == 0){
-                    this.paddle.flipY = false;
+                    this.tweens.add({ //ruota il paddle
+                        targets: this.paddle,
+                        angle: 0,         // ruota fino a 0 gradi
+                        duration: 200,      //per 200 millisecondi
+                        ease: 'Linear'
+                    });
                 }
             }
 
@@ -246,8 +301,8 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             }
             
             //generazione blocchi (ogni minuto)
-
-            if (this.timer > 3600) {
+            let generaNuoviBlocchi = 2000;
+            if (this.timer > generaNuoviBlocchi) {
                 this.generaBlocchi();
                 this.timer = 0;
                 if (this.mattoni.length != 0){ //riporta i mattoni alla posizione originale
@@ -256,14 +311,14 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                         mattone.refreshBody();
                     });
                 }
-            } else if (this.timer > 3540 && (this.timer%2 == 1) ){ //per far tremare i blocchi prima di farli scendere
+            } else if (this.timer > (generaNuoviBlocchi-60) && (this.timer%2 == 1) ){ //per far tremare i blocchi prima di farli scendere
                 if (this.mattoni.length != 0){
                     this.mattoni.forEach((mattone) => {
                         mattone.x += 3;
                         mattone.refreshBody();
                     });
                 }
-            } else if (this.timer > 3540 && (this.timer%2 == 0)){
+            } else if (this.timer > (generaNuoviBlocchi-60) && (this.timer%2 == 0)){
                 if (this.mattoni.length != 0){
                     this.mattoni.forEach((mattone) => {
                         mattone.x -= 3;
@@ -274,7 +329,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             
             
             //controllo se la pallina è attaccata al paddle prima di far andare il timer
-            if (this.ballAttached == false){ 
+            if (this.ballAttached == false && this.bossInCorso == false){ 
                 this.timer++;
             }
 
@@ -290,6 +345,21 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                     powerup.y += 3
                     if (powerup.y > 1100){
                         powerup.destroy(); 
+                    }
+                    if(this.calamita == true && powerup.y > 750 && (Math.abs(powerup.x - this.paddle.x) < 120) && powerup.tipo != "paddleCorto" && powerup.tipo != "ComandiInvertiti" && powerup.tipo != "piuBlocchi" && this.bossInCorso == false){
+                        if ((powerup.x - this.paddle.x) <= -5){
+                            if (powerup.y > 800){ //calamita più forte se sta per cadere giù il potenziamento
+                                powerup.x += 5;
+                            }
+                            powerup.x += 5;
+                        } else if ((powerup.x - this.paddle.x) >= 5){
+                            if (powerup.y > 800){
+                                powerup.x -= 5;
+                            }
+                            powerup.x -= 5;
+                        } else {
+                            powerup.x = this.paddle.x;
+                        }
                     }
                 })
             }
@@ -380,36 +450,107 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                 }
             }
 
-
             //potenziamento palla di fuoco
             if(this.pallaDiFuoco == true){
                 this.pallaDiFuoco = false;
-                this.timerPallaDiFuoco = 1800;
-                this.barraPallaDiFuoco = this.physics.add.sprite(130, 800, 'barraPallaDiFuoco');
+                this.timerPallaDiFuoco = 3400;
+                this.barraPallaDiFuoco = this.physics.add.sprite(130, 800, 'barraDiRiempimento');
                 this.barraPallaDiFuoco.setScale(2).setDepth(5);
             }
 
-            if (this.timerPallaDiFuoco <= 3600 && this.barraPallaDiFuoco != null && this.pallaDiFuocoAttiva == false){
+            if (this.timerPallaDiFuoco < 3600 && this.barraPallaDiFuoco != null && this.pallaDiFuocoAttiva == false){
                 this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
                 this.timerPallaDiFuoco++;
             }
 
             if (this.pallaDiFuocoAttiva == true){
                 this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
-                this.timerPallaDiFuoco -= 20;
-                if(!(this.ball.x <= 340 || this.ball.x >= 1580 || this.ball.y <= 30 || this.ball.y >= (this.paddle.y -50))){
+                this.timerPallaDiFuoco -= this.durataPallaDiFuoco;
+                if(!(this.ball.x <= 340 || this.ball.x >= 1580 || this.ball.y <= 18 || this.ball.y >= (this.paddle.y -50))){
                     this.ball.setVelocity(this.velocitaX, this.velocitaY);
                 } else {
                     this.velocitaX = this.ball.body.velocity.x;
                     this.velocitaY = this.ball.body.velocity.y;
                 }
+
                 if (this.timerPallaDiFuoco <= 0){
                     this.pallaDiFuocoAttiva = false;
                     this.ball.setTexture("ball");
+                    this.barraPallaDiFuoco.x = 130;
+                    this.scia.destroy();
+                    this.scia2.destroy();
                 }
+                
+                this.scia.setPosition(this.ballLastXPosition, this.ballLastYPosition);
+                this.scia2.setPosition(this.ballLastLastXPosition, this.ballLastLastYPosition);
+                this.ballLastLastXPosition = this.ballLastXPosition;
+                this.ballLastLastYPosition = this.ballLastYPosition;
+                this.ballLastXPosition = this.ball.x;
+                this.ballLastYPosition = this.ball.y;
+            }
+
+            //potenziamento proiettile
+            if (this.proiettile == true && this.bossInCorso == false){
+                if (this.timerProiettile >= this.frequenzaProiettile){
+                    this.projectile = this.physics.add.sprite(this.paddle.x,(this.paddle.y -40), 'projectile');
+                    this.physics.add.collider(this.projectile, this.bricks, (projectile, brick) => {this.collisioneBlocco(projectile, brick); this.projectile.destroy();});
+                    this.projectile.setVelocity(0, -500); 
+                    this.timerProiettile = 0;
+                }
+                this.timerProiettile++;
             }
 
 
+            //Boss
+            if (this.score >= this.punteggioPerBoss){
+                this.boss();
+            }
+
+            if(this.bossInCorso == true){
+                if (this.timerAttacco <= 0){
+                    if (this.bossNumber == 1){
+                        this.boss1();
+                    }
+                } 
+                if (this.bossNumber == 1){
+                    if(this.attackNumber == 1){
+                        if (this.attacks.length > 0){
+                            if (this.attackDuration >= 0){
+                                this.attacks.forEach((attack) => {
+                                    attack.setScale(this.attackDuration/800);
+                                })
+                            } else {
+                                this.attacks.forEach((attack) => {
+                                    attack.destroy();
+                                })
+                                this.attackNumber = 2;
+                            }
+                        }
+                    }
+                    if(this.attackNumber == 2){
+                            if (this.attackDuration >= 0){
+                                if(this.attackDuration % 15 == 0){
+                                    let powerup = this.physics.add.sprite(800 + Math.random() * 1300, 50, 'powerup').setCollideWorldBounds(false);;
+                                    powerup.tipo = "paddleLungo"; 
+                                    this.powerups.push(powerup);
+                                }
+                            } else {
+                                this.attackNumber = 1;
+                            }    
+                        }
+                    }
+                    if (this.powerups.length > 0){
+                        this.powerups.forEach((powerup) => {
+                            powerup.y += 4
+                            powerup.x += -4
+                            if (powerup.y > 1100){
+                                powerup.destroy(); 
+                            }
+                        })
+                    }
+                }
+                this.timerAttacco--;
+                this.attackDuration--;
         } else {
             this.paddle.setVelocityX(0);
         }
@@ -417,20 +558,27 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
     attivaPallaDiFuoco(){
         if(this.timerPallaDiFuoco >= 3600 && this.ingrandimento == false){
+            this.cameras.main.shake(3000, 0.001);
             this.pallaDiFuocoAttiva = true;
             this.velocitaX = this.ball.body.velocity.x;
             this.velocitaY = this.ball.body.velocity.y;
+            this.ballLastXPosition = this.ball.x;
+            this.ballLastYPosition = this.ball.y;
+            this.ballLastLastXPosition = this.ballLastXPosition;
+            this.ballLastLastYPosition = this.ballLastYPosition;
+            this.scia = this.physics.add.sprite(this.ballLastXPosition,this.ballLastYPosition, 'pallaDiFuoco').setAlpha(0.3);
+            this.scia2 = this.physics.add.sprite(this.ballLastXPosition,this.ballLastYPosition, 'pallaDiFuoco').setAlpha(0.3);
             this.ball.setTexture("pallaDiFuoco");
         }
     }
 
     collisionePaddle(){
-        let speed = 500
+        let speed = 650
 
         let diff = this.ball.x - this.paddle.x;
         let vX = speed * (diff / (this.paddle.width / 2));
 
-        vX = Phaser.Math.Clamp(vX, -450, 450); //limita la velocita a un intervallo tra -300 e 300
+        vX = Phaser.Math.Clamp(vX, -600, 600); //limita la velocita a un intervallo tra -450 e 450
 
         let vY = Math.sqrt(speed * speed - vX * vX);
 
@@ -468,9 +616,14 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             });
             this.score += punteggio;
         }
-        brick.resistenza -= 1;
+        brick.resistenza -= 1 * this.moltDamage;
 
         if (brick.resistenza <= 0){
+
+            if (brick.resistenza < 0){ // se il blocco ha resistenza minore di 0, toglie i punti che verranno attribuiti dopo per gli strati distrutti
+                this.score += 10 * brick.resistenza;
+            }
+
             this.blocchiDistrutti++;
             let casuale = Math.random() * 100;
             if (casuale <= 20){
@@ -485,21 +638,42 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             ball.setVelocityY(ball.body.velocity.y * 1.05);
         }
 
-        this.score += 10;
+        this.score += 10 * this.moltDamage;
         this.text_score.setText(this.score);
-        if(this.blocchiDistrutti >= this.blocchiAlPotenziamento){
+
+        if(this.blocchiDistrutti >= this.blocchiAlPotenziamento){ //Controllo quota per potenziamenti permanenti
             this.blocchiDistrutti -= this.blocchiAlPotenziamento;
             this.sbloccoPotenziamento++;
             this.potenziamentiPermanenti();
         }
         this.text_blocchiAlPotenziamento.setText(this.blocchiAlPotenziamento);
         this.text_blocchiDistrutti.setText(this.blocchiDistrutti);
+        this.riempimentoBlocchiDistrutti.setScale(1, this.blocchiDistrutti/this.blocchiAlPotenziamento);
     }
 
     potenziamentiPermanenti(){
-        if(this.sbloccoPotenziamento == 1){
+        if(this.sbloccoPotenziamento == 1){ //sblocca potenziamento palla di fuoco
             this.pallaDiFuoco = true;
-        }
+            this.blocchiAlPotenziamento = 1;
+        } else if (this.sbloccoPotenziamento == 2){ //sblocca potenziamento proiettile
+            this.proiettile = true;
+            this.blocchiAlPotenziamento = 2;
+        } else if (this.sbloccoPotenziamento == 3){ // + danno
+            this.moltDamage += 1;
+            this.blocchiAlPotenziamento = 3;
+        } else if (this.sbloccoPotenziamento == 4){ //sblocca potenziamento calamita
+            this.calamita = true;
+            this.blocchiAlPotenziamento = 3;
+        } else if (this.sbloccoPotenziamento == 5){
+            this.durataPallaDiFuoco = 10; //la palla di fuoco dura il doppio
+            this.blocchiAlPotenziamento = 3;
+        } else if (this.sbloccoPotenziamento == 6){ //proiettile spara più frequentemente
+            this.frequenzaProiettile = 300;
+            this.blocchiAlPotenziamento = 3;
+        } else if (this.sbloccoPotenziamento >= 7){ // + danno
+            this.moltDamage += 1;
+            this.blocchiAlPotenziamento = 3 * this.moltDamage;
+        } 
     }
 
     collisionePotenziamenti(paddle, powerup){
@@ -537,7 +711,12 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             this.generaBlocchi();
         } else if (powerup.tipo == "comandiInvertiti"){
             this.timerComandiInvertiti = 400;
-            this.paddle.flipY = true;
+            this.tweens.add({ //ruota il paddle
+                targets: this.paddle,
+                angle: 180,         // ruota fino a 180 gradi
+                duration: 200,      //per 800 millisecondi
+                ease: 'Linear'
+            });
         }
         powerup.destroy();
     }
@@ -602,6 +781,71 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
     }
 
+    boss(){
+        this.bossInCorso = true;
+        this.healt = 3;
+
+        //disattiva tutti gli eventuali potenziamenti
+        this.ingrandimento = false;
+        this.timerCannone = 0;
+        this.timerPaddleGrande = 0;
+        this.timerPaddleCorto = 0;
+        this.timerScudo = 0;
+        this.timerComandiInvertiti = 0;
+        this.timerPallaDiFuoco = 0;
+
+        //distrugge tutti i blocchi
+        if (this.mattoni.length != 0){
+            this.mattoni.forEach((mattone) => {
+                mattone.disableBody(true, true);
+            });
+        }
+
+        //distrugge tutti i potenziamenti che stanno cadendo
+        if (this.powerups.length > 0){
+            this.powerups.forEach((powerup) => {
+                powerup.destroy();
+            })
+        }
+
+        //distrugge la palla
+        this.ball.disableBody(true, true);
+
+        if (this.bossNumber == 1){
+            this.punteggioPerBoss = 12000;
+            this.timerAttacco = 0;
+            this.boss1();
+        }
+
+
+    }
+
+    boss1(){
+        if(this.attackNumber == 0){
+            this.attackNumber = 1;
+        } else if (this.attackNumber == 1){ //attacco palline da evitare
+            this.attackDuration = 800;
+            this.timerAttacco = 1000;
+            for (let x = 0; x < 3; x++){
+                let attack = this.physics.add.sprite(Math.random() * 900 + 350, 100, 'bossProjectile').setCollideWorldBounds(true).setBounce(1);
+                let vX = Math.floor(Math.random() * 80);
+                if (Math.random() * 2 < 0.5){
+                    attack.setVelocity(-100 -vX, -Math.sqrt(300*300 - vX*vX));
+                } else {
+                    attack.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
+                }
+                this.attacks.push(attack);
+            }
+        } else if (this.attackNumber == 2){ //attacco potenziamenti da evitare
+            this.attackDuration = 1200;
+            this.timerAttacco = 1500;
+        }
+    }
+
+    collisioneAttacco(){
+
+    }
+
     togglePause(){//attiva la pausa
         this.sound.play("pause"); 
         if (this.pausa == false){
@@ -647,8 +891,6 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         }
     
         this.veil.fillRect(0, 0, 1920, 1080);
-
-        
     }
 
     pulsantiSceltaOver(pulsante){
