@@ -1,0 +1,79 @@
+
+import MenuScene from '../MenuScene.js';
+import GameScene from './GameScene.js';
+
+export function togglePause(scene){//attiva la pausa
+    scene.sound.play("pause"); 
+    if (scene.pausa == false){
+        scene.pausa = true;
+        scene.velocitaX = scene.ball.body.velocity.x;
+        scene.velocitaY = scene.ball.body.velocity.y;
+        scene.ball.setVelocity(0,0);
+    } else {
+        scene.pausa = false;
+        scene.ball.setVelocity(scene.velocitaX,scene.velocitaY);
+    }
+    menuPausa(scene);
+}
+
+export function menuPausa(scene) {//menu di pausa
+
+    //crea un velo per oscurare lo schermo
+    if (!scene.veil) {
+        scene.veil = scene.add.graphics({ x: 0, y: 0 });
+        scene.veil.setDepth(10);
+        scene.veil.setScrollFactor(0);
+    }
+
+    scene.veil.clear(); // rimuove il contenuto grafico del veil precedente
+
+    if (scene.pausa) {
+        scene.veil.fillStyle(0x000000, 0.5);
+        scene.testo_pausa.setAlpha(1).setInteractive();
+        scene.pulsanti_pausa.forEach((pulsante) => {
+            pulsante
+            .setAlpha(1)
+            .setInteractive();
+        });
+    } else {
+        scene.sound.play("unpause"); 
+        scene.veil.fillStyle(0x000000, 0);
+        scene.pulsanti_pausa.forEach((pulsante) => {
+            pulsante
+            .setAlpha(0)
+            .disableInteractive();
+        });
+        scene.testo_pausa.setAlpha(0).disableInteractive();
+    }
+
+    scene.veil.fillRect(0, 0, 1920, 1080);
+}
+
+export function pulsantiSceltaOver(scene, pulsante){
+    pulsante.setStyle({ fontSize: '55px', });
+}
+
+export function pulsantiSceltaOut(scene, pulsante){
+    pulsante.setStyle({ fontSize: '50px', });
+}
+
+export function ricominciaClick(scene){
+    scene.scene.restart();
+}
+
+export function resettaGioco(scene){
+     // Distrugge l'istanza del gioco
+     scene.game.destroy(true); 
+
+     // Ricrea il gioco 
+     const config = {
+         type: Phaser.AUTO,
+         width: 1920,
+         height: 1030,
+         backgroundColor: 'rgb(30,30,30)',
+         physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
+         scene: [MenuScene, GameScene]
+     };
+
+     new Phaser.Game(config);
+}

@@ -1,6 +1,6 @@
 
 import MenuScene from './scenes/MenuScene.js';
-import GameScene from './scenes/GameScene.js';
+import GameScene from './scenes/GameScenes/GameScene.js';
 
 
 //qui viene creato l'oggetto "config" che contiene tutte le impostazioni del gioco
