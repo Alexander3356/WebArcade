@@ -1,5 +1,7 @@
 import { generaPotenziamento } from "./SimplePowerups.js";
 import { potenziamentiPermanenti } from "./PermanentPowerups.js";
+import { gameOver } from "./GameOver.js";
+
 
 
 export function  collisioneBlocco(scene, ball, brick){
@@ -75,13 +77,17 @@ export function generaBlocchi(scene){
         scene.mattoni.forEach((mattone) => {
             mattone.y += 30;
             mattone.refreshBody();
+            if (mattone.y >= 15 + 30 * 22){
+                gameOver(scene);
+            }
         });
     }
-    if (scene.difficolta == 0){
-        for (let x = 0; x < 12; x++){
-            let brick;
-            let casuale = Math.random() * 100;
+    for (let x = 0; x < 12; x++){
+        let brick;
+        let casuale = Math.random() * 100;
 
+        if (scene.difficolta == 0){
+        
             //20% di probabilita che il blocco abbia 2 di resistenza
             if (casuale < 80){ 
                 brick = scene.bricks.create(476 + x * 88, 15, "brick");
@@ -90,12 +96,42 @@ export function generaBlocchi(scene){
                 brick = scene.bricks.create(476 + x * 88, 15, "brick2");
                 brick.resistenza = 2;
             }
-            
-            brick.posizione = x; //mi segno la posizione originale nell'array del blocco
-            brick.setScale(1);
-            brick.refreshBody(); //per aggiornare la hitbox, serve per i corpi statici
-            scene.mattoni.push(brick);
         }
+
+        brick.posizione = x; //mi segno la posizione originale nell'array del blocco
+        brick.setScale(1);
+        brick.refreshBody(); //per aggiornare la hitbox, serve per i corpi statici
+        scene.mattoni.push(brick);
     }
 
+}
+
+
+export function blockCheck(scene){
+    //generazione blocchi (ogni minuto)
+    let generaNuoviBlocchi = 2000;
+    if (scene.timer > generaNuoviBlocchi) {
+        generaBlocchi(scene);
+        scene.timer = 0;
+        if (scene.mattoni.length != 0){ //riporta i mattoni alla posizione originale
+            scene.mattoni.forEach((mattone) => {
+                mattone.x = 476 + mattone.posizione * 88;
+                mattone.refreshBody();
+            });
+        }
+    } else if (scene.timer > (generaNuoviBlocchi-60) && (scene.timer%2 == 1) ){ //per far tremare i blocchi prima di farli scendere
+        if (scene.mattoni.length != 0){
+            scene.mattoni.forEach((mattone) => {
+                mattone.x += 3;
+                mattone.refreshBody();
+            });
+        }
+    } else if (scene.timer > (generaNuoviBlocchi-60) && (scene.timer%2 == 0)){
+        if (scene.mattoni.length != 0){
+            scene.mattoni.forEach((mattone) => {
+                mattone.x -= 3;
+                mattone.refreshBody();
+            });
+        }
+    }
 }

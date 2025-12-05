@@ -119,11 +119,31 @@ export function boss(scene){
     scene.ball.disableBody(true, true);
 
     if (scene.bossNumber == 1){
-        scene.punteggioPerBoss = 12000;
+        scene.punteggioPerBoss = 99999999;
         scene.timerAttacco = 0;
         boss1(scene);
     }
 
+    //fa partire la musica del boss 
+    scene.tweens.add({ // Fade out della musica attuale
+        targets: scene.musica,
+        volume: 0,
+        duration: 800,
+        onComplete: () => {
+            scene.musica.stop();
+
+            // musica del boss
+            scene.musica = scene.sound.add("boss", { loop: true, volume: 0 });
+            scene.musica.play();
+
+            // Fade in della nuova musica
+            scene.tweens.add({
+                targets: scene.musica,
+                volume: 1,
+                duration: 800
+            });
+        }
+    });
 
 }
 
@@ -134,8 +154,8 @@ export function boss1(scene){
         scene.timerAttacco = 200;
         scene.spider.setVisible(true).setActive(true);
     } else if (scene.attackNumber == 1 || scene.attackNumber == 3){ //attacco palline da evitare
-        scene.attackDuration = 800;
-        scene.timerAttacco = 1000;
+        scene.attackDuration = 700;
+        scene.timerAttacco = 900;
         for (let x = 0; x < 3; x++){
             let attack = null;
             if(scene.spider.x <= 900){
@@ -160,8 +180,8 @@ export function boss1(scene){
             scene.attacks.push(attack);
         }
     } else if (scene.attackNumber == 2){ //attacco potenziamenti da evitare
-        scene.attackDuration = 900;
-        scene.timerAttacco = 1200;
+        scene.attackDuration = 600;
+        scene.timerAttacco = 800;
         if(scene.timerPaddleGrande > 0){
             scene.timerPaddleGrande = 40;
         }
@@ -172,7 +192,7 @@ export function boss1Attack1(scene){
     if (scene.attacks.length > 0){
         if (scene.attackDuration >= 0){
             scene.attacks.forEach((attack) => {
-                attack.setScale(scene.attackDuration/800);
+                attack.setScale(scene.attackDuration/700);
                 if(attack.isGood == true && attack.hit == true && attack.y <= 100){
                     attack.destroy();
                     attack.hit = false;
@@ -198,6 +218,26 @@ export function boss1Attack1(scene){
                         scene.attacks.forEach((attack) => {
                             attack.destroy();
                         })
+                        //fa partire la musica principale
+                        scene.tweens.add({ // Fade out della musica attuale
+                            targets: scene.musica,
+                            volume: 0,
+                            duration: 5000,
+                            onComplete: () => {
+                                scene.musica.stop();
+
+                                // musica del gioco
+                                scene.musica = scene.sound.add("gioco", { loop: true, volume: 0 });
+                                scene.musica.play();
+
+                                // Fade in della nuova musica
+                                scene.tweens.add({
+                                    targets: scene.musica,
+                                    volume: 1,
+                                    duration: 800
+                                });
+                            }
+                        }); 
                     }
                 }
             })

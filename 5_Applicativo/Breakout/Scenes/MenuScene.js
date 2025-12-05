@@ -136,7 +136,26 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
         this.disabilitaPulsanti();
 
         //legge il file da cache.text che è uno ogetto che contiene i file caricati
-        let punteggi = this.cache.text.get('leaderboard'); 
+        let punteggi;
+    
+        try { //Fatto con AI
+            // Versione sincrona (bloccante ma semplice)
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', 'server.php', false); // false = sincrono
+            xhr.send();
+            
+            if(xhr.status === 200 && xhr.responseText.trim() !== "") {
+                punteggi = xhr.responseText;
+                // Aggiorna anche la cache locale
+                this.cache.text.remove('leaderboard');
+                this.cache.text.add('leaderboard', punteggi);
+            } else {
+                throw new Error('Server non risponde');
+            }
+        } catch(e) {
+            console.log("Server offline, uso cache locale:", e);
+            punteggi = this.cache.text.get('leaderboard') || "Nessun punteggio salvato";
+        }
 
         //salva i punteggi in un array, per ogni elemento dell'array rimuove anche eventuali carriage return
         //per evitare spazi maggiori tra punteggi quando verranno stampati

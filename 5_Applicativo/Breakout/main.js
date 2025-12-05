@@ -15,6 +15,12 @@ const config = {
 
     backgroundColor: 'rgb(30,30,30)',
 
+    //adatta il gioco a diverse risoluzioni (il codice è costruito per una risoluzione fissa di 1920x1080)
+    scale: {
+        mode: Phaser.Scale.FIT,  
+        autoCenter: Phaser.Scale.CENTER_BOTH 
+    },
+
     //configurazione del motore fisico
     physics: {
         default: "arcade", // viene usato il sistema di fisica "arcade" (adatto a giochi 2d)

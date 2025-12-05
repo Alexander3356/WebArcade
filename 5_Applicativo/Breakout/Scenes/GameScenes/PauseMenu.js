@@ -1,6 +1,4 @@
 
-import MenuScene from '../MenuScene.js';
-import GameScene from './GameScene.js';
 
 export function togglePause(scene){//attiva la pausa
     scene.sound.play("pause"); 
@@ -49,31 +47,3 @@ export function menuPausa(scene) {//menu di pausa
     scene.veil.fillRect(0, 0, 1920, 1080);
 }
 
-export function pulsantiSceltaOver(scene, pulsante){
-    pulsante.setStyle({ fontSize: '55px', });
-}
-
-export function pulsantiSceltaOut(scene, pulsante){
-    pulsante.setStyle({ fontSize: '50px', });
-}
-
-export function ricominciaClick(scene){
-    scene.scene.restart();
-}
-
-export function resettaGioco(scene){
-     // Distrugge l'istanza del gioco
-     scene.game.destroy(true); 
-
-     // Ricrea il gioco 
-     const config = {
-         type: Phaser.AUTO,
-         width: 1920,
-         height: 1030,
-         backgroundColor: 'rgb(30,30,30)',
-         physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
-         scene: [MenuScene, GameScene]
-     };
-
-     new Phaser.Game(config);
-}

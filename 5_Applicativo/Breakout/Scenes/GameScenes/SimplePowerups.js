@@ -73,3 +73,117 @@ export function collisionePotenziamenti(scene, paddle, powerup){
     }
     powerup.destroy();
 }
+
+
+export function simplePowerupCheck(scene){
+    //muove i powerup verso il basso se ce ne sono
+    if (scene.powerups.length > 0){
+        scene.powerups.forEach((powerup) => {
+            powerup.y += 3
+            if (powerup.y > 1100){
+                powerup.destroy(); 
+            }
+            if(scene.calamita == true && powerup.y > 750 && (Math.abs(powerup.x - scene.paddle.x) < 120) && powerup.tipo != "paddleCorto" && powerup.tipo != "comandiInvertiti" && powerup.tipo != "piuBlocchi" && scene.bossInCorso == false){
+                if ((powerup.x - scene.paddle.x) <= -5){
+                    if (powerup.y > 800){ //calamita più forte se sta per cadere giù il potenziamento
+                        powerup.x += 5;
+                    }
+                    powerup.x += 5;
+                } else if ((powerup.x - scene.paddle.x) >= 5){
+                    if (powerup.y > 800){
+                        powerup.x -= 5;
+                    }
+                    powerup.x -= 5;
+                } else {
+                    powerup.x = scene.paddle.x;
+                }
+            }
+        })
+    }
+
+    // Attiva il potenziamento cannone
+    if (scene.ball.potenziamento == "cannone") {
+        scene.ball.potenziamento = "cannoneAttivo";
+        scene.ball.setPosition(scene.paddle.x, scene.paddle.y - 40);
+        scene.ball.setVelocity(0, -1500); 
+    }
+
+    if(scene.ball.potenziamento == "cannoneAttivo" && scene.ball.y <= 20){
+        scene.ball.setPosition(scene.paddle.x, scene.paddle.y - 40);
+        scene.ball.setVelocity(0, -1500); 
+    }
+
+    if (scene.timerCannone == 0 && scene.ball.potenziamento == "cannoneAttivo"){
+        scene.ball.potenziamento = null;
+        scene.ballAttached = true;
+        scene.ball.setVelocity(0,0);
+        scene.ball.setPosition(scene.paddle.x, scene.paddle.y - 40);
+    }
+
+    if (scene.ball.potenziamento == "cannoneAttivo"){
+        scene.timerCannone -= 1;
+    }
+
+    //potenziamento paddle grande
+    if (scene.timerPaddleGrande > 0) {
+        scene.timerPaddleGrande--;
+        
+        if(scene.timerPaddleGrande <= 40){
+            if(scene.timerPaddleGrande%2 == 1){
+                scene.paddle.setAlpha(0.5)
+            } else {
+                scene.paddle.setAlpha(1)
+            }
+        }
+
+        if (scene.timerPaddleGrande <= 0) {
+            scene.paddle.setScale(1);
+            scene.paddle.setAlpha(1)
+        }
+    }
+
+    //depotenziamento paddle piccolo
+    if (scene.timerPaddleCorto > 0) {
+        scene.timerPaddleCorto--;
+        
+        if(scene.timerPaddleCorto <= 40){
+            if(scene.timerPaddleCorto%2 == 1){
+                scene.paddle.setAlpha(0.5)
+            } else {
+                scene.paddle.setAlpha(1)
+            }
+        }
+
+        if (scene.timerPaddleCorto <= 0) {
+            scene.paddle.setScale(1);
+            scene.paddle.setAlpha(1)
+        }
+    }
+
+    //potenziamento scudo
+    if (scene.timerScudo > 0) {
+        scene.timerScudo--;
+        
+        if(scene.timerScudo <= 40){
+            if(scene.timerScudo%2 == 1){
+                scene.scudo.setAlpha(0.5)
+                scene.scudo2.setAlpha(0.5)
+            } else {
+                scene.scudo.setAlpha(1)
+                scene.scudo2.setAlpha(1)
+            }
+        } else if (scene.timerScudo > 40 && scene.ball.y >= 920){
+            scene.timerScudo = 40;
+        }
+    } 
+    if (scene.timerScudo <= 0) {
+        if (scene.scudo) {
+            scene.scudo.destroy();
+            scene.scudo = null;
+        }
+        if (scene.scudo2) {
+            scene.scudo2.destroy();
+            scene.scudo2 = null;
+        }
+    }
+}
