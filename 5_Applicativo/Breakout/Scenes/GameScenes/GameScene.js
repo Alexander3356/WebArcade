@@ -1,16 +1,12 @@
 
-import { collisionePotenziamenti } from "./SimplePowerups.js";
-import { attivaPallaDiFuoco } from "./PermanentPowerups.js";
-import { togglePause } from "./PauseMenu.js";
-import { pulsantiSceltaOver } from "./PauseMenu.js";
-import { pulsantiSceltaOut } from "./PauseMenu.js";
-import { ricominciaClick } from "./PauseMenu.js";
-import { resettaGioco } from "./PauseMenu.js";
-import { bossCheck } from "./Boss.js";
-import { collisioneAttacco } from "./Boss.js";
-import { collisioneBlocco } from "./Blocks.js";
-import { generaBlocchi } from "./Blocks.js";
+import * as SimplePowerups from "./SimplePowerups.js";
+import * as PermanentPowerups from "./PermanentPowerups.js";
+import * as Pause from "./PauseMenu.js";
+import * as Boss from "./Boss.js";
+import * as Blocks from "./Blocks.js";
+import * as GameOver from "./GameOver.js";
 
+import MenuScene from '../MenuScene.js';
 
 export default class GameScene extends Phaser.Scene { //il gioco principale
 
@@ -38,11 +34,18 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //punteggio
         this.score = 0;
         this.text_score;
+        this.punteggioSalvato;
 
         //pausa
         this.pulsanti_pausa = [];
         this.pausa = false;
         this.testo_pausa = null; 
+
+        //gameover
+        this.gameover = false;
+        this.pulsanti_gameover = [];
+        this.testo_pausa = null;
+        this.inputText = ""; 
 
         //velocità pallina
         this.velocitaX = 0;
@@ -127,8 +130,6 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.load.image("spiderWalk3", "Assets/Images/boss1/spiderWalk_3.png");
         this.load.image("spiderStill4", "Assets/Images/boss1/spiderStill_4.png");
 
-
-
         //Suoni
         this.load.audio("click", "Assets/Sound/click.wav")
         this.load.audio("hit", "Assets/Sound/hit.wav")
@@ -138,6 +139,11 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //musica
         this.load.audio("gioco", "Assets/Music/gioco.mp3")
+        this.load.audio("boss", "Assets/Music/boss.mp3")
+
+        //text
+        this.load.text("leaderboard", "Assets/leaderboard.txt")
+
     }
 
     create() { //setup degli oggetti e il loro comportamento
@@ -145,10 +151,14 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //resetta array e variabili
         this.mattoni = []; 
         this.pulsanti_pausa = [];
+        this.pulsanti_gameover = [];
         this.ballAttached = true;
         this.pausa = false;
+        this.gameover = false;
+        this.punteggioSalvato = false;
         this.velocitaX = 0;
         this.velocitaY = 0;
+        this.score = 0;
 
         //fa partire la musica
         this.musica = this.sound.add("gioco");
@@ -180,12 +190,12 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //controlla se viene premuto il pulsante ESC (per la pausa)
         this.input.keyboard.on('keydown-ESC', () => {
-            togglePause(this);
+            Pause.togglePause(this);
         });
 
         //controlla se viene premuto il pulsante SPACE (per la palla di fuoco)
         this.input.keyboard.on('keydown-SPACE', () => {
-            attivaPallaDiFuoco(this);
+            PermanentPowerups.attivaPallaDiFuoco(this);
         });
 
         //crea la scritta per il punteggio
@@ -207,10 +217,10 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
 
         this.bricks = this.physics.add.staticGroup();
-        this.physics.add.collider(this.ball, this.bricks, (ball, bricks) => collisioneBlocco(this, ball, bricks)); //overlap permette di colpire più blocchi nello stesso frame
+        this.physics.add.collider(this.ball, this.bricks, (ball, bricks) => Blocks.collisioneBlocco(this, ball, bricks)); //overlap permette di colpire più blocchi nello stesso frame
 
         for (let x = 0; x < 4; x++){
-            generaBlocchi(this);
+            Blocks.generaBlocchi(this);
         }
 
         //testo per la pausa
@@ -221,19 +231,74 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //pulsanti per il menu di pausa
         this.pulsanti_pausa.push(this.pulsante_riprendi = this.add.text(960, 450, 'RIPRENDI', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
-        .on('pointerdown', () => {togglePause(this)}));
+        .on('pointerdown', () => {Pause.togglePause(this)}));
         this.pulsanti_pausa.push(this.pulsante_ricomincia = this.add.text(960, 550, 'RICOMINCIA', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
-        .on('pointerdown', () => {this.sound.play("click");ricominciaClick(this)}));
+        .on('pointerdown', () => {this.sound.play("click"); this.ricominciaClick(this)}));
         this.pulsanti_pausa.push(this.pulsante_menu = this.add.text(960, 650, 'TORNA AL MENU', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
-        .on('pointerdown', () => {this.sound.play("click"); resettaGioco(this)}));
+        .on('pointerdown', () => {this.sound.play("click"); this.resettaGioco(this)}));
 
 
         this.pulsanti_pausa.forEach((pulsante) => {
             pulsante
             .disableInteractive()
             .setOrigin(0.5, 0.5)
-            .on("pointerover", () => pulsantiSceltaOver(this, pulsante) )
-            .on('pointerout', () => pulsantiSceltaOut(this, pulsante) )
+            .on("pointerover", () => this.pulsantiSceltaOver(pulsante) )
+            .on('pointerout', () => this.pulsantiSceltaOut(pulsante) )
+            .setDepth(11)
+            .setAlpha(0);
+        });
+
+        //testo per il gameover
+        this.testo_gameover = this.add.text(960, 200, 'GAME OVER', { fontSize: '75px', fill: 'rgb(255,255,255)' })
+        .setOrigin(0.5, 0.5)
+        .setDepth(11)
+        .setAlpha(0);
+        this.testo_gameoverPunteggio = this.add.text(960, 280, 'PUNTEGGIO: ', { fontSize: '45px', fill: 'rgb(255,255,255)' })
+        .setOrigin(0.5, 0.5)
+        .setDepth(11)
+        .setAlpha(0);
+
+        //testo per inserire il nome del giocatore
+        this.inputText = "";
+        this.inputDisplay = this.add.text(960, 470, "NOME: ", {fontSize: "40px",color: "#ffffff"})
+        .setOrigin(0.5, 0.5)
+        .setDepth(11)
+        .setAlpha(0);
+
+        // cursore lampeggiante
+        this.cursorVisible = true;
+        this.cursorTimer = this.time.addEvent({
+            delay: 500,
+            callback: () => {
+                if (this.gameover) { // lampeggia solo c'è il gameover
+                    this.cursorVisible = !this.cursorVisible;
+                    this.updateInputDisplay();
+                }
+            },
+            loop: true
+        });
+
+        // Permette all'utente di scrivere il proprio nome
+        this.input.keyboard.on("keydown", (event) => {
+            if (this.gameover) { // solo se c'è il gameover
+                this.handleTyping(event);
+            }
+        });
+
+        //pulsanti per il menu di gameover
+        this.pulsanti_gameover.push(this.pulsante_salvaPunteggio = this.add.text(960, 540, 'SALVA PUNTEGGIO', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
+        .on('pointerdown', () => {GameOver.saveScore(this)}));
+        this.pulsanti_gameover.push(this.pulsante_ricomincia = this.add.text(960, 700, 'RICOMINCIA', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
+        .on('pointerdown', () => {this.sound.play("click"); this.ricominciaClick(this)}));
+        this.pulsanti_gameover.push(this.pulsante_menu = this.add.text(960, 800, 'TORNA AL MENU', { fontSize: '50px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5)
+        .on('pointerdown', () => {this.sound.play("click"); this.resettaGioco(this)}));
+
+        this.pulsanti_gameover.forEach((pulsante) => {
+            pulsante
+            .disableInteractive()
+            .setOrigin(0.5, 0.5)
+            .on("pointerover", () => this.pulsantiSceltaOver(pulsante) )
+            .on('pointerout', () => this.pulsantiSceltaOut(pulsante) )
             .setDepth(11)
             .setAlpha(0);
         });
@@ -250,6 +315,11 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         let rightBorder = this.add.rectangle(1770, 540, 300, 1080, 0x101010);
         this.physics.add.existing(rightBorder, true);
 
+        //linea tratteggiata che segna il limite per i blocchi
+        for(let x = -3; x <= 1870; x += 48){
+            this.add.rectangle(300 + x, 3 + 30 * 22, 30, 5, 50).setOrigin(0, 0.5).setDepth(-1).setFillStyle(0x878787, 0.1);
+        }
+
         // aggiungi collisione con la pallina e i bordi
         this.physics.add.collider(this.ball, leftBorder);
         this.physics.add.collider(this.ball, rightBorder);
@@ -257,10 +327,10 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.physics.add.collider(this.paddle, rightBorder);
                 
         //collisione paddle e powerup
-        this.physics.add.collider(this.paddle, this.powerups, (paddle, powerup) => collisionePotenziamenti(this, paddle, powerup));
+        this.physics.add.collider(this.paddle, this.powerups, (paddle, powerup) => SimplePowerups.collisionePotenziamenti(this, paddle, powerup));
 
         //collisione paddle e attacchi boss
-        this.physics.add.collider(this.paddle, this.attacks, (paddle, attack) => collisioneAttacco(this, paddle, attack));
+        this.physics.add.collider(this.paddle, this.attacks, (paddle, attack) => Boss.collisioneAttacco(this, paddle, attack));
 
         //barra per la palla di fuoco
         this.riempimentoPallaDiFuoco = this.add.rectangle(130, 860, 60, 125, 0xf55d42).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);
@@ -296,7 +366,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
     }
 
     update() { //aggiorna lo stato del gioco ogni frame
-        if (this.pausa == false) {
+        if (this.pausa == false && this.gameover == false) {
             //movimento giocatore
             if (this.lastLeft === undefined) this.lastLeft = false;
             if (this.lastRight === undefined) this.lastRight = false;
@@ -356,34 +426,6 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                 this.ball.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
             }
             
-            //generazione blocchi (ogni minuto)
-            let generaNuoviBlocchi = 2000;
-            if (this.timer > generaNuoviBlocchi) {
-                generaBlocchi(this);
-                this.timer = 0;
-                if (this.mattoni.length != 0){ //riporta i mattoni alla posizione originale
-                    this.mattoni.forEach((mattone) => {
-                        mattone.x = 476 + mattone.posizione * 88;
-                        mattone.refreshBody();
-                    });
-                }
-            } else if (this.timer > (generaNuoviBlocchi-60) && (this.timer%2 == 1) ){ //per far tremare i blocchi prima di farli scendere
-                if (this.mattoni.length != 0){
-                    this.mattoni.forEach((mattone) => {
-                        mattone.x += 3;
-                        mattone.refreshBody();
-                    });
-                }
-            } else if (this.timer > (generaNuoviBlocchi-60) && (this.timer%2 == 0)){
-                if (this.mattoni.length != 0){
-                    this.mattoni.forEach((mattone) => {
-                        mattone.x -= 3;
-                        mattone.refreshBody();
-                    });
-                }
-            }
-            
-            
             //controllo se la pallina è attaccata al paddle prima di far andare il timer
             if (this.ballAttached == false && this.bossInCorso == false){ 
                 this.timer++;
@@ -394,172 +436,19 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                 this.ball.setVelocityY(-80);
             }
 
+            //generazione blocchi
+            Blocks.blockCheck(this);
         
-            //muove i powerup verso il basso se ce ne sono
-            if (this.powerups.length > 0){
-                this.powerups.forEach((powerup) => {
-                    powerup.y += 3
-                    if (powerup.y > 1100){
-                        powerup.destroy(); 
-                    }
-                    if(this.calamita == true && powerup.y > 750 && (Math.abs(powerup.x - this.paddle.x) < 120) && powerup.tipo != "paddleCorto" && powerup.tipo != "comandiInvertiti" && powerup.tipo != "piuBlocchi" && this.bossInCorso == false){
-                        if ((powerup.x - this.paddle.x) <= -5){
-                            if (powerup.y > 800){ //calamita più forte se sta per cadere giù il potenziamento
-                                powerup.x += 5;
-                            }
-                            powerup.x += 5;
-                        } else if ((powerup.x - this.paddle.x) >= 5){
-                            if (powerup.y > 800){
-                                powerup.x -= 5;
-                            }
-                            powerup.x -= 5;
-                        } else {
-                            powerup.x = this.paddle.x;
-                        }
-                    }
-                })
-            }
+            //powerup semplici
+            SimplePowerups.simplePowerupCheck(this);
 
-            // Attiva il potenziamento cannone
-            if (this.ball.potenziamento == "cannone") {
-                this.ball.potenziamento = "cannoneAttivo";
-                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-                this.ball.setVelocity(0, -1500); 
-            }
-
-            if(this.ball.potenziamento == "cannoneAttivo" && this.ball.y <= 20){
-                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-                this.ball.setVelocity(0, -1500); 
-            }
-
-            if (this.timerCannone == 0 && this.ball.potenziamento == "cannoneAttivo"){
-                this.ball.potenziamento = null;
-                this.ballAttached = true;
-                this.ball.setVelocity(0,0);
-                this.ball.setPosition(this.paddle.x, this.paddle.y - 40);
-            }
-
-            if (this.ball.potenziamento == "cannoneAttivo"){
-                this.timerCannone -= 1;
-            }
-
-            //potenziamento paddle grande
-            if (this.timerPaddleGrande > 0) {
-                this.timerPaddleGrande--;
-                
-                if(this.timerPaddleGrande <= 40){
-                    if(this.timerPaddleGrande%2 == 1){
-                        this.paddle.setAlpha(0.5)
-                    } else {
-                        this.paddle.setAlpha(1)
-                    }
-                }
-
-                if (this.timerPaddleGrande <= 0) {
-                    this.paddle.setScale(1);
-                    this.paddle.setAlpha(1)
-                }
-            }
-
-            //depotenziamento paddle piccolo
-            if (this.timerPaddleCorto > 0) {
-                this.timerPaddleCorto--;
-                
-                if(this.timerPaddleCorto <= 40){
-                    if(this.timerPaddleCorto%2 == 1){
-                        this.paddle.setAlpha(0.5)
-                    } else {
-                        this.paddle.setAlpha(1)
-                    }
-                }
-
-                if (this.timerPaddleCorto <= 0) {
-                    this.paddle.setScale(1);
-                    this.paddle.setAlpha(1)
-                }
-            }
-
-            //potenziamento scudo
-            if (this.timerScudo > 0) {
-                this.timerScudo--;
-                
-                if(this.timerScudo <= 40){
-                    if(this.timerScudo%2 == 1){
-                        this.scudo.setAlpha(0.5)
-                        this.scudo2.setAlpha(0.5)
-                    } else {
-                        this.scudo.setAlpha(1)
-                        this.scudo2.setAlpha(1)
-                    }
-                } else if (this.timerScudo > 40 && this.ball.y >= 920){
-                    this.timerScudo = 40;
-                }
-            } 
-            if (this.timerScudo <= 0) {
-                if (this.scudo) {
-                    this.scudo.destroy();
-                    this.scudo = null;
-                }
-                if (this.scudo2) {
-                    this.scudo2.destroy();
-                    this.scudo2 = null;
-                }
-            }
-
-            //potenziamento palla di fuoco
-            if(this.pallaDiFuoco == true){
-                this.pallaDiFuoco = false;
-                this.timerPallaDiFuoco = 3400;
-                this.barraPallaDiFuoco = this.physics.add.sprite(130, 800, 'barraDiRiempimento');
-                this.barraPallaDiFuoco.setScale(2).setDepth(5);
-            }
-
-            if (this.timerPallaDiFuoco < 3600 && this.barraPallaDiFuoco != null && this.pallaDiFuocoAttiva == false){
-                this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
-                this.timerPallaDiFuoco++;
-            }
-
-            if (this.pallaDiFuocoAttiva == true){
-                this.riempimentoPallaDiFuoco.setScale(1, this.timerPallaDiFuoco/3600);
-                this.timerPallaDiFuoco -= this.durataPallaDiFuoco;
-                if(!(this.ball.x <= 340 || this.ball.x >= 1580 || this.ball.y <= 18 || this.ball.y >= (this.paddle.y -50))){
-                    this.ball.setVelocity(this.velocitaX, this.velocitaY);
-                } else {
-                    this.velocitaX = this.ball.body.velocity.x;
-                    this.velocitaY = this.ball.body.velocity.y;
-                }
-
-                if (this.timerPallaDiFuoco <= 0){
-                    this.pallaDiFuocoAttiva = false;
-                    this.ball.setTexture("ball");
-                    this.barraPallaDiFuoco.x = 130;
-                    this.scia.destroy();
-                    this.scia2.destroy();
-                }
-                
-                this.scia.setPosition(this.ballLastXPosition, this.ballLastYPosition);
-                this.scia2.setPosition(this.ballLastLastXPosition, this.ballLastLastYPosition);
-                this.ballLastLastXPosition = this.ballLastXPosition;
-                this.ballLastLastYPosition = this.ballLastYPosition;
-                this.ballLastXPosition = this.ball.x;
-                this.ballLastYPosition = this.ball.y;
-            }
-
-            //potenziamento proiettile
-            if (this.proiettile == true && this.bossInCorso == false){
-                if (this.timerProiettile >= this.frequenzaProiettile){
-                    this.projectile = this.physics.add.sprite(this.paddle.x,(this.paddle.y -40), 'projectile');
-                    this.physics.add.collider(this.projectile, this.bricks, (projectile, brick) => { collisioneBlocco(this, projectile, brick); this.projectile.destroy();});
-                    this.projectile.setVelocity(0, -500); 
-                    this.timerProiettile = 0;
-                }
-                this.timerProiettile++;
-            }
-
+            //Powerup permanenti
+            PermanentPowerups.permanentPowerupCheck(this);
 
             //Boss
-            bossCheck(this);
+            Boss.bossCheck(this);
             
+
         } else {
             this.paddle.setVelocityX(0);
         }
@@ -578,10 +467,69 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         let vY = Math.sqrt(speed * speed - vX * vX);
 
         this.ball.setVelocity(vX, -vY);
-
     }
 
+    handleTyping(event) {
+        const key = event.key;
     
+        if (key === "Backspace") {
+            this.inputText = this.inputText.slice(0, -1);
+            this.updateInputDisplay();
+            return;
+        }
+    
+        // Blocca tasti speciali
+        if (key.length > 1) return;
+    
+        // Aggiunge caratteri 
+        if (this.inputText.length < 10) {
+            this.inputText += key;
+            this.updateInputDisplay();
+        }
+    }
+
+    updateInputDisplay() {
+        let cursorChar = this.cursorVisible ? "|" : " ";
+        this.inputDisplay.setText("NOME: " + this.inputText + cursorChar);
+    }
+
+
+    pulsantiSceltaOver(pulsante){
+        pulsante.setStyle({ fontSize: '55px', });
+    }
+    
+    pulsantiSceltaOut(pulsante){
+        pulsante.setStyle({ fontSize: '50px', });
+    }
+    
+    ricominciaClick(){
+        if (this.veil) {
+            this.veil.destroy();
+            this.veil = null;
+        }
+        this.scene.restart();
+    }
+    
+    resettaGioco(){
+         // Distrugge l'istanza del gioco
+         this.game.destroy(true); 
+    
+         // Ricrea il gioco 
+         const config = {
+             type: Phaser.AUTO,
+             width: 1920,
+             height: 1030,
+             backgroundColor: 'rgb(30,30,30)',
+             scale: {
+                mode: Phaser.Scale.FIT,  
+                autoCenter: Phaser.Scale.CENTER_BOTH 
+            },
+             physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
+             scene: [MenuScene, GameScene]
+         };
+    
+         new Phaser.Game(config);
+    }
 
 
 
