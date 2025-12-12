@@ -10,7 +10,7 @@ export function  collisioneBlocco(scene, ball, brick){
         scene.ball.setPosition(scene.paddle.x, scene.paddle.y - 40);
         scene.ball.setVelocity(0, -1500);
     }
-    if(scene.ingrandimento == true){
+    if(scene.ingrandimento == true && ball.isNotBall != true){
         let punteggio = 0;
         scene.ingrandimento = false;
         scene.ball.setScale(1);
@@ -49,7 +49,11 @@ export function  collisioneBlocco(scene, ball, brick){
         }
         brick.disableBody(true, true); //rimuove il blocco
     } else {
-        brick.setTexture(scene.mattoniTexture[brick.resistenza - 1])
+        if(brick.resistenza > 6){
+            brick.setTexture(scene.mattoniTexture[5])
+        } else {
+            brick.setTexture(scene.mattoniTexture[brick.resistenza - 1])
+        }
     }
     
     if (Math.abs(ball.body.velocity.y) < 800) { //aumenta la velocità quando colpisce un blocco
@@ -77,7 +81,7 @@ export function generaBlocchi(scene){
         scene.mattoni.forEach((mattone) => {
             mattone.y += 30;
             mattone.refreshBody();
-            if (mattone.y >= 15 + 30 * 22){
+            if (mattone.y >= 15 + 30 * 22 && mattone.resistenza > 0){ //Game Over
                 gameOver(scene);
             }
         });
@@ -86,7 +90,7 @@ export function generaBlocchi(scene){
         let brick;
         let casuale = Math.random() * 100;
 
-        if (scene.difficolta == 0){
+        if (scene.score < 1000){
         
             //20% di probabilita che il blocco abbia 2 di resistenza
             if (casuale < 80){ 
@@ -96,6 +100,70 @@ export function generaBlocchi(scene){
                 brick = scene.bricks.create(476 + x * 88, 15, "brick2");
                 brick.resistenza = 2;
             }
+        } else if (scene.score < 3000 && scene.score >= 1000){
+            if (casuale < 50){ 
+                brick = scene.bricks.create(476 + x * 88, 15, "brick");
+                brick.resistenza = 1;
+            } else if (casuale < 80 && casuale >= 50) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick2");
+                brick.resistenza = 2;
+            } else {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick3");
+                brick.resistenza = 3;
+            }
+        } else if (scene.score < 6000 && scene.score >= 3000){
+            if (casuale < 20){ 
+                brick = scene.bricks.create(476 + x * 88, 15, "brick");
+                brick.resistenza = 1;
+            } else if (casuale < 50 && casuale >= 20) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick2");
+                brick.resistenza = 2;
+            } else if (casuale < 80 && casuale >= 50) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick3");
+                brick.resistenza = 3;
+            } else{
+                brick = scene.bricks.create(476 + x * 88, 15, "brick4");
+                brick.resistenza = 4;
+            }
+        } else if (scene.score < 9000 && scene.score >= 6000){
+            if (casuale < 30){ 
+                brick = scene.bricks.create(476 + x * 88, 15, "brick2");
+                brick.resistenza = 2;
+            } else if (casuale < 60 && casuale >= 30) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick3");
+                brick.resistenza = 3;
+            } else if (casuale < 80 && casuale >= 60) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick4");
+                brick.resistenza = 4;
+            } else{
+                brick = scene.bricks.create(476 + x * 88, 15, "brick5");
+                brick.resistenza = 5;
+            }
+        } else if (scene.score < 12000 && scene.score >= 9000){
+            if (casuale < 30){ 
+                brick = scene.bricks.create(476 + x * 88, 15, "brick3");
+                brick.resistenza = 3;
+            } else if (casuale < 60 && casuale >= 30) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick4");
+                brick.resistenza = 4;
+            } else if (casuale < 80 && casuale >= 60) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick5");
+                brick.resistenza = 5;
+            } else{
+                brick = scene.bricks.create(476 + x * 88, 15, "brick6");
+                brick.resistenza = 6;
+            }
+        } else {
+            if (casuale < 50){ 
+                brick = scene.bricks.create(476 + x * 88, 15, "brick6");
+                brick.resistenza = Math.round(scene.score/20);
+            } else if (casuale < 80 && casuale >= 50) {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick6");
+                brick.resistenza = Math.round(scene.score/20) + 1;
+            } else {
+                brick = scene.bricks.create(476 + x * 88, 15, "brick6");
+                brick.resistenza = Math.round(scene.score/20) + 2;
+            } 
         }
 
         brick.posizione = x; //mi segno la posizione originale nell'array del blocco

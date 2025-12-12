@@ -4,32 +4,38 @@ import { collisioneBlocco } from "./Blocks.js";
 export function potenziamentiPermanenti(scene){
     if(scene.sbloccoPotenziamento == 1){ //sblocca potenziamento palla di fuoco
         scene.pallaDiFuoco = true;
-        scene.blocchiAlPotenziamento = 1;
+        scene.blocchiAlPotenziamento = 30;
     } else if (scene.sbloccoPotenziamento == 2){ //sblocca potenziamento proiettile
         scene.proiettile = true;
-        scene.blocchiAlPotenziamento = 2;
+        scene.blocchiAlPotenziamento = 50;
     } else if (scene.sbloccoPotenziamento == 3){ // + danno
         scene.moltDamage += 1;
-        scene.blocchiAlPotenziamento = 3;
+        scene.blocchiAlPotenziamento = 80;
     } else if (scene.sbloccoPotenziamento == 4){ //sblocca potenziamento calamita
         scene.calamita = true;
-        scene.blocchiAlPotenziamento = 3;
+        scene.blocchiAlPotenziamento = 120;
     } else if (scene.sbloccoPotenziamento == 5){
         scene.durataPallaDiFuoco = 20; //la palla di fuoco dura il doppio
         scene.blocchiAlPotenziamento = 3;
     } else if (scene.sbloccoPotenziamento == 6){ //proiettile spara più frequentemente
         scene.frequenzaProiettile = 300;
-        scene.blocchiAlPotenziamento = 3;
+        scene.blocchiAlPotenziamento = 150;
     } else if (scene.sbloccoPotenziamento >= 7){ // + danno
         scene.moltDamage += 1;
-        scene.blocchiAlPotenziamento = 3 * scene.moltDamage;
+        if (scene.pallaDiFuocoAttiva == true){ //perché la palla di fuoco ha piu danno della palla normale
+            scene.blocchiAlPotenziamento = 100 * scene.moltDamage/20;
+        } else{
+            scene.blocchiAlPotenziamento = 100 * scene.moltDamage;
+        }
     } 
 }
 
 export function attivaPallaDiFuoco(scene){ 
-    if(scene.timerPallaDiFuoco >= 3600 && scene.ingrandimento == false){
+    if(scene.timerPallaDiFuoco >= 3600 && scene.ingrandimento == false && scene.timerCannone <= 0){
         scene.cameras.main.shake(3000, 0.001);
         scene.pallaDiFuocoAttiva = true;
+        scene.oldMoltDamage = scene.moltDamage;
+        scene.moltDamage = 20;
         scene.velocitaX = scene.ball.body.velocity.x;
         scene.velocitaY = scene.ball.body.velocity.y;
         scene.ballLastXPosition = scene.ball.x;
@@ -72,6 +78,7 @@ export function permanentPowerupCheck(scene){
             scene.barraPallaDiFuoco.x = 130;
             scene.scia.destroy();
             scene.scia2.destroy();
+            scene.moltDamage = scene.oldMoltDamage;
         }
         
         scene.scia.setPosition(scene.ballLastXPosition, scene.ballLastYPosition);
@@ -86,6 +93,7 @@ export function permanentPowerupCheck(scene){
     if (scene.proiettile == true && scene.bossInCorso == false){
         if (scene.timerProiettile >= scene.frequenzaProiettile){
             scene.projectile = scene.physics.add.sprite(scene.paddle.x,(scene.paddle.y -40), 'projectile');
+            scene.projectile.isNotBall = true;
             scene.physics.add.collider(scene.projectile, scene.bricks, (projectile, brick) => { collisioneBlocco(scene, projectile, brick); scene.projectile.destroy();});
             scene.projectile.setVelocity(0, -500); 
             scene.timerProiettile = 0;

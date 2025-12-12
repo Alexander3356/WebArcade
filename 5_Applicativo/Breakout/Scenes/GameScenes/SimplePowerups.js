@@ -34,7 +34,7 @@ export function collisionePotenziamenti(scene, paddle, powerup){
     if (powerup.tipo == "ingrandimento" && scene.pallaDiFuocoAttiva == false){
         scene.ball.setScale(3);
         scene.ingrandimento = true;
-    } else if (powerup.tipo == "cannone"){
+    } else if (powerup.tipo == "cannone" && scene.pallaDiFuocoAttiva == false){
         scene.timerCannone = 300;
         scene.ball.potenziamento = "cannone";
     } else if (powerup.tipo == "paddleLungo"){

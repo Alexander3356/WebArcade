@@ -9,11 +9,16 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
     }
 
     preload() { //per caricare gli assets
-        this.load.image('tutorial1', 'Assets/Images/tutorial1.png');
-        this.load.image('tutorial2', 'Assets/Images/tutorial2.png');
-        this.load.image('tutorial3', 'Assets/Images/tutorial3.png');
+        this.load.image('tutorial1', 'Assets/Images/Tutorial/tutorial_1.png');
+        this.load.image('tutorial2', 'Assets/Images/Tutorial/tutorial_2.png');
+        this.load.image('tutorial3', 'Assets/Images/Tutorial/tutorial_3.png');
+        this.load.image('tutorial4', 'Assets/Images/Tutorial/tutorial_4.png');
         this.load.text("leaderboard", "Assets/leaderboard.txt")
         this.load.audio("click", "Assets/Sound/click.wav")
+
+        //sfondo
+        this.load.glsl('marble', 'Assets/Shaders/marble.frag');
+        this.load.glsl('marble2', 'Assets/Shaders/marble2.frag');
     }
 
     create() {
@@ -34,7 +39,8 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
         this.pulsanti.push(this.leaderboardbutton = this.add.rectangle(960, 700, 1920, 80, 0xe1e810).setInteractive()
         .on('pointerdown', () => {this.sound.play("click"); this.leaderboardClick()})); 
 
-        this.pulsanti.push(this.exitbutton = this.add.rectangle(960, 800, 1920, 80, 0xe1e810).setInteractive());
+        this.pulsanti.push(this.exitbutton = this.add.rectangle(960, 800, 1920, 80, 0xe1e810).setInteractive()
+        .on('pointerdown', () => {this.sound.play("click"); this.esciClick()})); 
 
         this.pulsanti.forEach((pulsante) => {
             pulsante.setOrigin(0.5, 0.5);
@@ -58,10 +64,17 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
         //imposta tutti i testi al centro della pagina
         this.text.forEach((testo) => {
             testo.setOrigin(0.5, 0.5);
+            testo.setDepth(5);
         });
 
 
+        //sfondo
+        this.marble = this.add.shader('marble', 960, 540, 1920, 1080);
+        this.marble2 = this.add.shader('marble2', 960, 540, 1920, 1080).setVisible(false).setActive(false);
+
     }
+
+    
 
     giocaClick(){
         if (this.first_time == true){
@@ -186,11 +199,15 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
     tutorial(){
         this.conta = 0;
         this.pulsanti_tutorial = [];
+        this.marble.setActive(false).setVisible(false);
+        this.marble2.setActive(true).setVisible(true).setDepth(8);
 
-        this.cameras.main.setBackgroundColor('rgb(0, 0, 0)');
-        this.pulsanti_tutorial.push(this.tutorialButton1 = this.add.image(960, 500, "tutorial1"));
-        this.pulsanti_tutorial.push(this.tutorialButton2 = this.add.image(960, 500, "tutorial2"));
-        this.pulsanti_tutorial.push(this.tutorialButton3 = this.add.image(960, 500, "tutorial3"));
+        this.add.rectangle(0, 0, 1920, 1080, 0x404040).setOrigin(0,0).setDepth(7);
+        this.add.text(960, 200, 'TUTORIAL', { fontSize: '110px', fill: 'rgb(255,255,255)' }).setOrigin(0.5, 0.5).setDepth(10);
+        this.pulsanti_tutorial.push(this.tutorialButton1 = this.add.image(960, 650, "tutorial1").setScale(1.5).setDepth(10));
+        this.pulsanti_tutorial.push(this.tutorialButton2 = this.add.image(960, 650, "tutorial2").setScale(1.5).setDepth(10));
+        this.pulsanti_tutorial.push(this.tutorialButton3 = this.add.image(960, 650, "tutorial3").setScale(1.5).setDepth(10));
+        this.pulsanti_tutorial.push(this.tutorialButton4 = this.add.image(960, 650, "tutorial4").setScale(1.5).setDepth(10));
 
         this.pulsanti_tutorial.forEach((pulsante) => {
             pulsante.setInteractive();
@@ -203,7 +220,7 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
     }
 
     skip(){
-        if (this.conta >= 2){
+        if (this.conta >= 3){
             this.pulsanti_tutorial[this.conta].setAlpha(0);
             this.scene.start('GameScene');
         } else {
@@ -213,11 +230,14 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
         }
     }
 
+    esciClick(){
+        window.location.href = 'https://google.com';
+    }
+
     buttonOver(pulsante){
         // Previene più timer o tween insieme
         if (this.playHoverTimer || this.playFadeTween) return;
 
-        //animazione di hover dei pulsanti (fatto con AI)
         this.playHoverTimer = this.time.delayedCall(20, () => {
             this.playFadeTween = this.tweens.add({
                 targets: pulsante,
@@ -233,8 +253,7 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
     }
 
     buttonOut(pulsante){
-
-        //animazione di hover dei pulsanti (fatto con AI)
+        
         if (this.playHoverTimer) {
             this.playHoverTimer.remove();
             this.playHoverTimer = null;

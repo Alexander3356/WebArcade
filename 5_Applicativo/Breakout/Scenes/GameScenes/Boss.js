@@ -1,5 +1,6 @@
 
 import { generaBlocchi } from "./Blocks.js";
+import { gameOver } from "./GameOver.js";
 
 export function bossCheck(scene){
 
@@ -288,6 +289,9 @@ export function collisioneAttacco(scene, paddle, attack){
         scene.healt--;
         scene.healtPoints[scene.healt].destroy();
         attack.destroy();
+        if(scene.healt <= 0){
+            gameOver(scene);
+        }
     }
     
 }
