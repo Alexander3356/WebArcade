@@ -25,10 +25,11 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.lastDirection = "fermo";
         this.lastLeft = false;
         this.lastRight = false;
+        this.inputEnabled = true;
 
         //mattoni
         this.bricks;
-        this.mattoniTexture = ["brick","brick2"];
+        this.mattoniTexture = ["brick","brick2","brick3","brick4","brick5","brick6"];
         this.mattoni = [];
 
         //punteggio
@@ -63,8 +64,8 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.timerComandiInvertiti = 0;
 
         //potenziamenti permanenti
-        this.blocchiAlPotenziamento = 10;
-        this.blocchiDistrutti = 9;
+        this.blocchiAlPotenziamento = 15;
+        this.blocchiDistrutti = 0;
         this.text_blocchiAlPotenziamento;
         this.text_blocchiDistrutti;
         this.sbloccoPotenziamento = 0;
@@ -88,8 +89,9 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.frequenzaProiettile = 600;
 
         this.moltDamage = 1;
+        this.oldMoltDamage = 1;
 
-        this.calamita = true;
+        this.calamita = false;
 
         //Boss 
         this.bossNumber = 1;
@@ -112,8 +114,12 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //immagini
         this.load.image('paddle', 'Assets/Images/paddle.png');
         this.load.image('ball', 'Assets/Images/ball.png');
-        this.load.image('brick', 'Assets/Images/brick1.png');
-        this.load.image('brick2', 'Assets/Images/brick 2.png');
+        this.load.image('brick', 'Assets/Images/Bricks/brick1.png');
+        this.load.image('brick2', 'Assets/Images/Bricks/brick2.png');
+        this.load.image('brick3', 'Assets/Images/Bricks/brick3.png');
+        this.load.image('brick4', 'Assets/Images/Bricks/brick4.png');
+        this.load.image('brick5', 'Assets/Images/Bricks/brick5.png');
+        this.load.image('brick6', 'Assets/Images/Bricks/brick6.png');
         this.load.image('powerup', 'Assets/Images/powerup.png');
         this.load.image('powerdown', 'Assets/Images/powerdown.png');
         this.load.image('barraDiRiempimento', 'Assets/Images/barraFuoco.png');
@@ -159,6 +165,14 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.velocitaX = 0;
         this.velocitaY = 0;
         this.score = 0;
+        this.blocchiAlPotenziamento = 15;
+        this.blocchiDistrutti = 0;
+        this.sbloccoPotenziamento = 0;
+        this.bossNumber = 1;
+        this.bossInCorso = false;
+        this.punteggioPerBoss = 5000;
+        this.calamita = false;
+        this.proiettile = false;
 
         //fa partire la musica
         this.musica = this.sound.add("gioco");
@@ -167,7 +181,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //lo sprite viene creato alla posizione (900, 880) 
         //e gli vengono assegnate proprieta fisiche con "this.physics.add.sprite"
-        this.paddle = this.physics.add.sprite(900, 880, 'paddle');
+        this.paddle = this.physics.add.sprite(945, 880, 'paddle');
         this.paddle.setScale(1); //ridimensiona il paddle
 
         //il paddle viene impostato per collidere con i bordi dello schermo
@@ -394,7 +408,9 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             }
 
             // Applica velocità
-            this.paddle.setVelocityX(this.lastDirection * 700);
+            if(this.inputEnabled == true){
+                this.paddle.setVelocityX(this.lastDirection * 700);
+            }
 
             // Aggiorna stato dei tasti per il prossimo frame
             this.lastLeft = leftDown;
@@ -414,13 +430,13 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             }
 
             //lancio pallina
-            if (this.ballAttached == true && (this.cursor.left.isDown || this.cursor2.left.isDown)) {
+            if (this.ballAttached == true && (this.cursor.left.isDown || this.cursor2.left.isDown) && this.inputEnabled == true) {
                 this.ballAttached = false;
                 let vX = Math.floor(Math.random() * 200);
                 this.ball.setVelocity(-100 - vX, -Math.sqrt(300*300 - vX*vX));
             }
 
-            if (this.ballAttached == true && (this.cursor.right.isDown || this.cursor2.right.isDown)) {
+            if (this.ballAttached == true && (this.cursor.right.isDown || this.cursor2.right.isDown)&& this.inputEnabled == true) {
                 this.ballAttached = false;
                 let vX = Math.floor(Math.random() * 200);
                 this.ball.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
@@ -434,6 +450,34 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             //per evitare che la pallina si blocchi a rimbalzare in orizzontale all'infinito
             if ((Math.abs(this.ball.body.velocity.y) < 70) && this.ballAttached == false){
                 this.ball.setVelocityY(-80);
+            }
+
+            //controlla se la pallina scende sotto al paddle
+            if (this.ball.y > 1050){
+                this.paddle.setPosition(950, 880);
+                this.paddle.setVelocityX(0);
+                this.blocchiDistrutti = 0;
+                this.ball.potenziamento = null;
+                this.ball.setVelocity(0,0);
+                this.ballAttached = true;
+                this.ball.setPosition(945, 840);
+                this.text_blocchiDistrutti.setText(this.blocchiDistrutti);
+                this.riempimentoBlocchiDistrutti.setScale(1, 0);
+
+                this.inputEnabled = false; // variabile custom
+
+                //lfa lampeggiare il paddle e impedisce l'input del giocatore
+                this.tweens.add({
+                    targets: this.paddle,
+                    duration: 20,        
+                    repeat: 20,           
+                    yoyo: true,
+                    alpha: { from: 1, to: 0.2 },  
+                    onComplete: () => {
+                        this.paddle.alpha = 1;
+                        this.inputEnabled = true;
+                    }
+                });
             }
 
             //generazione blocchi
