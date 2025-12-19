@@ -78,7 +78,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.barraPallaDiFuoco = null;
         this.riempimentoPallaDiFuoco;
         this.pallaDiFuocoAttiva = false;
-        this.durataPallaDiFuoco = 10;
+        this.durataPallaDiFuoco = 20;
         this.ballLastXPosition;
         this.ballLastYPosition;
         this.ballLastLastXPosition;
@@ -187,7 +187,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.spider = null;
         this.currentBossSprite = null;
         this.currentBossAnimation = null;
-        this.durataPallaDiFuoco = 10;
+        this.durataPallaDiFuoco = 20;
 
         //fa partire la musica
         this.musica = this.sound.add("gioco");
