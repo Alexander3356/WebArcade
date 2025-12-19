@@ -16,6 +16,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.ball;
         this.musica;
         this.ballAttached = true;
+        this.firstThrow = true;
         this.difficolta = 0;
         this.timer = 3500;
 
@@ -122,9 +123,9 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.load.image('brick6', 'Assets/Images/Bricks/brick6.png');
         this.load.image('powerup', 'Assets/Images/powerup.png');
         this.load.image('powerdown', 'Assets/Images/powerdown.png');
-        this.load.image('barraDiRiempimento', 'Assets/Images/barraFuoco.png');
+        this.load.image('barraDiRiempimento', 'Assets/Images/barraDiRicarica.png');
         this.load.image('pallaDiFuoco', 'Assets/Images/pallaDiFuoco.png')
-        this.load.image("projectile", "Assets/Images/projectile.png")
+        this.load.image("projectile", "Assets/Images/projectile2.png")
         this.load.image("heart", "Assets/Images/healt.png")
         this.load.image("bossProjectile", "Assets/Images/bossBullet.png")
         this.load.image("bossProjectileGood", "Assets/Images/bossBulletGood.png")
@@ -139,7 +140,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //Suoni
         this.load.audio("click", "Assets/Sound/click.wav")
         this.load.audio("hit", "Assets/Sound/hit.wav")
-        this.load.audio("powerup", "Assets/Sound/powerup.wav")
+        this.load.audio("powerup", "Assets/Sound/powerup2.wav")
         this.load.audio("pause", "Assets/Sound/pause.mp3")
         this.load.audio("unpause", "Assets/Sound/unpause.mp3")
 
@@ -159,6 +160,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.pulsanti_pausa = [];
         this.pulsanti_gameover = [];
         this.ballAttached = true;
+        this.firstThrow = true;
         this.pausa = false;
         this.gameover = false;
         this.punteggioSalvato = false;
@@ -173,6 +175,19 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         this.punteggioPerBoss = 5000;
         this.calamita = false;
         this.proiettile = false;
+        this.bossNumber = 1;
+        this.bossInCorso = false;
+        this.punteggioPerBoss = 5000;
+        this.timerAttacco = 0;
+        this.attacks = [];
+        this.healt = 3;
+        this.bossHealt = 3;
+        this.attackDuration = 0;
+        this.attackNumber = 0;
+        this.spider = null;
+        this.currentBossSprite = null;
+        this.currentBossAnimation = null;
+        this.durataPallaDiFuoco = 10;
 
         //fa partire la musica
         this.musica = this.sound.add("gioco");
@@ -331,7 +346,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
         //linea tratteggiata che segna il limite per i blocchi
         for(let x = -3; x <= 1870; x += 48){
-            this.add.rectangle(300 + x, 3 + 30 * 22, 30, 5, 50).setOrigin(0, 0.5).setDepth(-1).setFillStyle(0x878787, 0.1);
+            this.add.rectangle(300 + x, 3 + 30 * 18, 30, 5, 50).setOrigin(0, 0.5).setDepth(-1).setFillStyle(0x878787, 0.1);
         }
 
         // aggiungi collisione con la pallina e i bordi
@@ -352,7 +367,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
         //barra potenziamenti permanenti
         this.riempimentoBlocchiDistrutti = this.add.rectangle(1790, 860, 60, 125, 0xebdb34).setDepth(3).setOrigin(0.5, 1).setScale(1, 0);
         this.barraBlocchiAlPotenziamento = this.physics.add.sprite(1790, 800, 'barraDiRiempimento');
-        this.barraBlocchiAlPotenziamento.setScale(2).setDepth(5);
+        this.barraBlocchiAlPotenziamento.setScale(0.5).setDepth(5);
 
         //animazione boss1
         this.spider = this.physics.add.sprite(1000, 50, 'spiderStill').setScale(2).setVisible(false).setActive(false);;
@@ -376,6 +391,21 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
             repeat: -1
         });
 
+        //Cheat
+        this.keys = this.input.keyboard.addKeys("P,O,I,U");
+
+        this.input.keyboard.on('keydown', () => {
+            if (this.keys.P.isDown && this.keys.O.isDown) { //+200 punteggio
+                this.score += 200;
+                this.text_score.setText(this.score);
+            }
+            if (this.keys.P.isDown && this.keys.I.isDown) { //genera una fila di blocchi
+                Blocks.generaBlocchi(this);
+            }
+            if (this.keys.P.isDown && this.keys.U.isDown) { //genera un potenziamento al centro
+                SimplePowerups.generaPotenziamento(this,{ x: 900, y: 400 });
+            }
+        });
 
     }
 
@@ -434,16 +464,22 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
                 this.ballAttached = false;
                 let vX = Math.floor(Math.random() * 200);
                 this.ball.setVelocity(-100 - vX, -Math.sqrt(300*300 - vX*vX));
+                if (this.firstThrow == true){
+                    this.firstThrow = false;
+                }
             }
 
             if (this.ballAttached == true && (this.cursor.right.isDown || this.cursor2.right.isDown)&& this.inputEnabled == true) {
                 this.ballAttached = false;
                 let vX = Math.floor(Math.random() * 200);
                 this.ball.setVelocity(100 + vX, -Math.sqrt(300*300 - vX*vX));
+                if (this.firstThrow == true){
+                    this.firstThrow = false;
+                }
             }
             
             //controllo se la pallina è attaccata al paddle prima di far andare il timer
-            if (this.ballAttached == false && this.bossInCorso == false){ 
+            if (this.firstThrow == false && this.bossInCorso == false){ 
                 this.timer++;
             }
 
@@ -491,6 +527,7 @@ export default class GameScene extends Phaser.Scene { //il gioco principale
 
             //Boss
             Boss.bossCheck(this);
+
             
 
         } else {
