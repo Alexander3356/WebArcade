@@ -15,7 +15,7 @@ export function potenziamentiPermanenti(scene){
         scene.calamita = true;
         scene.blocchiAlPotenziamento = 120;
     } else if (scene.sbloccoPotenziamento == 5){
-        scene.durataPallaDiFuoco = 20; //la palla di fuoco dura il doppio
+        scene.durataPallaDiFuoco = 10; //la palla di fuoco dura il doppio
         scene.blocchiAlPotenziamento = 3;
     } else if (scene.sbloccoPotenziamento == 6){ //proiettile spara più frequentemente
         scene.frequenzaProiettile = 300;
