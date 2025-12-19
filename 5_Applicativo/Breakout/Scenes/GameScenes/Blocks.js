@@ -44,10 +44,11 @@ export function  collisioneBlocco(scene, ball, brick){
 
         scene.blocchiDistrutti++;
         let casuale = Math.random() * 100;
-        if (casuale <= 20){
+        if (casuale <= 15){
             generaPotenziamento(scene, brick);
         }
         brick.disableBody(true, true); //rimuove il blocco
+        scene.bricks.remove(brick, true, true);
     } else {
         if(brick.resistenza > 6){
             brick.setTexture(scene.mattoniTexture[5])
@@ -79,9 +80,10 @@ export function  collisioneBlocco(scene, ball, brick){
 export function generaBlocchi(scene){
     if (scene.mattoni.length != 0){
         scene.mattoni.forEach((mattone) => {
+            if (!mattone.active) return;
             mattone.y += 30;
             mattone.refreshBody();
-            if (mattone.y >= 15 + 30 * 22 && mattone.resistenza > 0){ //Game Over
+            if (mattone.y >= 15 + 30 * 18 && mattone.resistenza > 0){ //Game Over
                 gameOver(scene);
             }
         });
@@ -177,12 +179,13 @@ export function generaBlocchi(scene){
 
 export function blockCheck(scene){
     //generazione blocchi (ogni minuto)
-    let generaNuoviBlocchi = 2000;
+    let generaNuoviBlocchi = 1600;
     if (scene.timer > generaNuoviBlocchi) {
         generaBlocchi(scene);
         scene.timer = 0;
         if (scene.mattoni.length != 0){ //riporta i mattoni alla posizione originale
             scene.mattoni.forEach((mattone) => {
+                if (!mattone.active) return;
                 mattone.x = 476 + mattone.posizione * 88;
                 mattone.refreshBody();
             });
@@ -190,6 +193,7 @@ export function blockCheck(scene){
     } else if (scene.timer > (generaNuoviBlocchi-60) && (scene.timer%2 == 1) ){ //per far tremare i blocchi prima di farli scendere
         if (scene.mattoni.length != 0){
             scene.mattoni.forEach((mattone) => {
+                if (!mattone.active) return;
                 mattone.x += 3;
                 mattone.refreshBody();
             });
@@ -197,6 +201,7 @@ export function blockCheck(scene){
     } else if (scene.timer > (generaNuoviBlocchi-60) && (scene.timer%2 == 0)){
         if (scene.mattoni.length != 0){
             scene.mattoni.forEach((mattone) => {
+                if (!mattone.active) return;
                 mattone.x -= 3;
                 mattone.refreshBody();
             });

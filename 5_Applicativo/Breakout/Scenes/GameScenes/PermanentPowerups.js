@@ -22,7 +22,8 @@ export function potenziamentiPermanenti(scene){
         scene.blocchiAlPotenziamento = 150;
     } else if (scene.sbloccoPotenziamento >= 7){ // + danno
         scene.moltDamage += 1;
-        if (scene.pallaDiFuocoAttiva == true){ //perché la palla di fuoco ha piu danno della palla normale
+        if (scene.pallaDiFuocoAttiva == true){ 
+            //la palla di fuoco ha piu danno della palla normale
             scene.blocchiAlPotenziamento = 100 * scene.moltDamage/20;
         } else{
             scene.blocchiAlPotenziamento = 100 * scene.moltDamage;
@@ -54,7 +55,7 @@ export function permanentPowerupCheck(scene){
         scene.pallaDiFuoco = false;
         scene.timerPallaDiFuoco = 3400;
         scene.barraPallaDiFuoco = scene.physics.add.sprite(130, 800, 'barraDiRiempimento');
-        scene.barraPallaDiFuoco.setScale(2).setDepth(5);
+        scene.barraPallaDiFuoco.setScale(0.5).setDepth(5);
     }
 
     if (scene.timerPallaDiFuoco < 3600 && scene.barraPallaDiFuoco != null && scene.pallaDiFuocoAttiva == false){
@@ -92,7 +93,7 @@ export function permanentPowerupCheck(scene){
     //potenziamento proiettile
     if (scene.proiettile == true && scene.bossInCorso == false){
         if (scene.timerProiettile >= scene.frequenzaProiettile){
-            scene.projectile = scene.physics.add.sprite(scene.paddle.x,(scene.paddle.y -40), 'projectile');
+            scene.projectile = scene.physics.add.sprite(scene.paddle.x,(scene.paddle.y -40), 'projectile').setScale(2);
             scene.projectile.isNotBall = true;
             scene.physics.add.collider(scene.projectile, scene.bricks, (projectile, brick) => { collisioneBlocco(scene, projectile, brick); scene.projectile.destroy();});
             scene.projectile.setVelocity(0, -500); 

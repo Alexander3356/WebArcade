@@ -25,7 +25,7 @@ export function menuPausa(scene) {//menu di pausa
 
     scene.veil.clear(); // rimuove il contenuto grafico del veil precedente
 
-    if (scene.pausa) {
+    if (scene.pausa) { //Attiva i pulsanti di pausa
         scene.veil.fillStyle(0x000000, 0.5);
         scene.testo_pausa.setAlpha(1).setInteractive();
         scene.pulsanti_pausa.forEach((pulsante) => {
@@ -33,7 +33,7 @@ export function menuPausa(scene) {//menu di pausa
             .setAlpha(1)
             .setInteractive();
         });
-    } else {
+    } else { //disattiva i pulsanti di pausa
         scene.sound.play("unpause"); 
         scene.veil.fillStyle(0x000000, 0);
         scene.pulsanti_pausa.forEach((pulsante) => {

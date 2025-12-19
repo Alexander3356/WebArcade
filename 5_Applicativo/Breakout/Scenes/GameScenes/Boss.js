@@ -105,6 +105,7 @@ export function boss(scene){
     //distrugge tutti i blocchi
     if (scene.mattoni.length != 0){
         scene.mattoni.forEach((mattone) => {
+            if (!mattone.active) return;
             mattone.disableBody(true, true);
         });
     }
@@ -157,7 +158,7 @@ export function boss1(scene){
     } else if (scene.attackNumber == 1 || scene.attackNumber == 3){ //attacco palline da evitare
         scene.attackDuration = 700;
         scene.timerAttacco = 900;
-        for (let x = 0; x < 3; x++){
+        for (let x = 0; x < (3+ (4-scene.bossHealt) ); x++){
             let attack = null;
             if(scene.spider.x <= 900){
                 attack = scene.physics.add.sprite(scene.spider.x + Math.random() * 100, 100, 'bossProjectile').setCollideWorldBounds(true).setBounce(1);
@@ -176,6 +177,8 @@ export function boss1(scene){
                 attack.setTexture("bossProjectileGood");
                 attack.isGood = true;
                 attack.setVelocityY(attack.body.velocity.y * 1.80);
+            } else if (scene.attackNumber == 1 && x == 0){
+                attack.destroy();
             }
 
             scene.attacks.push(attack);
@@ -255,16 +258,14 @@ export function boss1Attack1(scene){
 export function boss1Attack2(scene){
     if (scene.attackDuration >= 0){
         if(scene.attackDuration % 15 == 0){
-            let powerup = scene.physics.add.sprite(800 + Math.random() * 1300, 50, 'powerup').setCollideWorldBounds(false);;
+            let powerup = scene.physics.add.sprite(800 + Math.random() * 1300, 50, 'powerdown').setCollideWorldBounds(false);;
             powerup.tipo = "paddleLungo"; 
             scene.powerups.push(powerup);
         }
     } else {
-        if (scene.lastAttackNumber == 3){
-            scene.attackNumber = 1;
-        } else {
-            scene.attackNumber = 3;
-        }
+
+        scene.attackNumber = 3;
+        
     }    
 }
 
@@ -272,6 +273,7 @@ export function boss1Attack2(scene){
 
 export function collisioneAttacco(scene, paddle, attack){
     if(attack.isGood == true){
+        if (attack.hit) return;
         attack.hit = true;
         scene.bossHealt--;
          // Calcola la distanza tra il proiettile e il boss

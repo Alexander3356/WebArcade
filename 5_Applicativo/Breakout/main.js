@@ -1,4 +1,5 @@
 
+
 import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScenes/GameScene.js';
 
@@ -32,6 +33,10 @@ const config = {
 
     //scene del gioco
     scene: [MenuScene, GameScene],
+    fps: {
+        target: 60,   // numero di frame al secondo desiderato
+        forceSetTimeOut: true // opzione che forza l’uso di setTimeout per un framerate più stabile
+    }
 
 };
 

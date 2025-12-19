@@ -32,8 +32,12 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
         
 
         //pulsanti
-        this.pulsanti.push(this.playbutton = this.add.rectangle(960, 500, 1920, 80, 0xe1e810).setInteractive()
-        .on('pointerdown', () => {this.sound.play("click"); this.giocaClick() })); 
+        this.pulsanti.push(this.playbutton = this.add.rectangle(960, 500, 1920, 80, 0xe1e810)
+        .setInteractive()
+        .on('pointerdown', () => {
+            this.sound.play("click"); 
+            this.giocaClick() 
+        })); 
 
         this.pulsanti.push(this.twoplayerbutton = this.add.rectangle(960, 600, 1920, 80, 0xe1e810).setInteractive());
         this.pulsanti.push(this.leaderboardbutton = this.add.rectangle(960, 700, 1920, 80, 0xe1e810).setInteractive()
@@ -264,7 +268,7 @@ export default class MenuScene extends Phaser.Scene { //menu di gioco
             this.playFadeTween = null;
         }
         
-        this.tweens.add({ // Torna quasi invisibile subito
+        this.tweens.add({ // Torna invisibile 
             targets: pulsante,
             alpha: 0.001,
             duration: 100,
